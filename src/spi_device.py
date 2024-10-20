@@ -100,7 +100,7 @@ class MS5607(SPI_Device):
     
     def get_pressure_and_temperature(self):
         '''
-        Read and calculate calibrated temperature and pressure
+        Read and calculate calibrated temperature and pressure, as well as altitude
         '''
         D1 = self.convert_and_read(1)
         D2 = self.convert_and_read(2)
@@ -118,9 +118,11 @@ class MS5607(SPI_Device):
         
         P = (D1 * SENS / (2 ** 21) - OFF) / (2 ** 15)
         T = 2000 + dT * (C6 / (2 ** 23))
+        A = self.get_altitude(P / 100)
         
         results_dict = {"p_mbar": P / 100,
-                        "t_c": T / 100}
+                        "t_c": T / 100,
+                        "alt_m": A}
         return results_dict
     
     def get_altitude(self, p_mbar: float):

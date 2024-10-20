@@ -137,6 +137,12 @@ def generate_wspr_message(callsign: str, grid: str, power: int):
         
     return output
 
+def encode_telemetry():
+    '''
+    Encode balloon telemetry into the format documented at https://qrp-labs.com/flights/s4#protocol
+    '''
+    #TODO
+    return
 
 class Beacon:
     def __init__(self, i2c: machine.I2C, uart: machine.UART, pps: machine.Pin):

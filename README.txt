@@ -57,3 +57,5 @@ environment by approx. 10C - 20C.
 -Add inveted F GPS antenna
 -Add option for UFL port for external GPS antenna
 -Add test points to serial lines (I2C/SPI/maybe UART)
+-Add filtering to ADC solar/output voltage sense lines
+-Add output capacitance to boost converter
