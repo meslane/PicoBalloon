@@ -46,4 +46,8 @@ warm up for approximately 30 minutes to ensure transmission accuracy.
 -Add bleeder resistor to supercap
 -Change HF antenna and solar inputs from 2.54mm headers to screw terminals
 -Remap I2C for Si5351 to use hardware I2C
+-Remap SPI for MS5607 to use hardware SPI
 -Change some 0402s to 0603s for easier soldering
+-Add inveted F GPS antenna
+-Add option for UFL port for external GPS antenna
+-Add test points to serial lines (I2C/SPI/maybe UART)
