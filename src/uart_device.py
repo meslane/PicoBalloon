@@ -13,6 +13,69 @@ class LIV3(UART_Device):
         self.reset.value(1) #reset is active low, so set pin to high to force out of reset
         self.wake.value(1) #force wake up
         
+    def get_GPGGA_data(self):
+        '''
+        Block and await GPGGA string over UART from GPS module
+        
+        Returns:
+            dict containing all GPGGA info
+        '''
+        
+        #flush potentially stale data
+        if self.uart.any() > 0:
+            self.uart.flush()
+        
+        while True:
+            #await data over UART
+            while self.uart.any() == 0:
+                pass
+        
+            try:
+                uart_str = self.uart.readline().decode("utf-8")
+                #print(uart_str)
+            except UnicodeError:
+                uart_str = "000000"
+                
+            if uart_str[0:6] == '$GPGGA':
+                break
+        
+        #split all data into list
+        c_buffer = []
+        GPGGA_list = []
+        for char in uart_str:
+            if char != ',':
+                c_buffer.append(char)
+            else:
+                GPGGA_list.append(''.join(c_buffer))
+                c_buffer = []
+                
+        GPGGA_dict = {}
+        
+        lat_arcmin = float(GPGGA_list[2])
+        lon_arcmin = float(GPGGA_list[4])
+        
+        lat_remainder = (lat_arcmin % 100) / 60
+        lon_remainder = (lon_arcmin % 100) / 60
+        
+        lat_deg = float(int(lat_arcmin / 100)) + lat_remainder
+        lon_deg = float(int(lon_arcmin / 100)) + lon_remainder
+        
+        if GPGGA_list[3] == 'S':
+            lat_deg *= -1
+        if GPGGA_list[5] == 'W':
+            lon_deg *= -1
+        
+        GPGGA_dict['t_utc'] = float(GPGGA_list[1])
+        #GPGGA_dict['lat_arcmin'] = GPGGA_list[2]
+        #GPGGA_dict['lon_arcmin'] = GPGGA_list[4]
+        GPGGA_dict['lat_deg'] = lat_deg
+        GPGGA_dict['lon_deg'] = lon_deg
+        GPGGA_dict['alt_m'] = float(GPGGA_list[9])
+        GPGGA_dict['und_m'] = float(GPGGA_list[11])
+        GPGGA_dict['satellites'] = int(GPGGA_list[7])
+        
+        return GPGGA_dict
+        
 class TEL0132(UART_Device):
     def __init__(self, uart: machine.UART):
         super().__init__(uart)
