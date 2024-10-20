@@ -150,9 +150,15 @@ class SI5351(I2C_Device):
         self.i2c_write(channel + 16, data)
     
     def reset_plls(self):
+        '''
+        Reset pll sources
+        '''
         self.i2c_write(177, 0xA0)
         
     def set_load_capacitance(self, cl: int):
+        '''
+        Configure load capacitance of the crystal
+        '''
         cl_list = [6, 8, 10]
         assert cl in cl_list
         

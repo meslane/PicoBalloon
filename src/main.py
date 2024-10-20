@@ -64,7 +64,10 @@ while True:
 while True:
     #print(altimeter.convert_and_read(1,osr=4))
     #print(altimeter.convert_and_read(2,osr=4))
-    print(altimeter.get_temperature())
+    alt_dict = altimeter.get_pressure_and_temperature()
+    print(alt_dict)
+    print(altimeter.get_altitude(alt_dict['p_mbar']))
+    
     time.sleep(0.5)
     
     '''

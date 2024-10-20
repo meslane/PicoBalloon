@@ -40,6 +40,12 @@ warm up for approximately 30 minutes to ensure transmission accuracy.
 -D1 = pressure reading
 -D2 = temperature reading
 
+== Temperature Reading ==
+The temperature reading returned by the MS5607 is coupled to the
+temperature of the PCBA, which includes self-heating. As such,
+it will typically over-report relative to the temperature of its
+environment by approx. 10C - 20C.
+
 ~==== v1.0 Known Issues and Desired Changes ====~
 
 -Change header for SWD to 2.54mm pin header from test points
