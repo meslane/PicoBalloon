@@ -48,14 +48,14 @@ environment by approx. 10C - 20C.
 
 ~==== v1.0 Known Issues and Desired Changes ====~
 
--Change header for SWD to 2.54mm pin header from test points
--Add bleeder resistor to supercap
--Change HF antenna and solar inputs from 2.54mm headers to screw terminals
--Remap I2C for Si5351 to use hardware I2C
--Remap SPI for MS5607 to use hardware SPI
--Change some 0402s to 0603s for easier soldering
--Add inveted F GPS antenna
--Add option for UFL port for external GPS antenna
--Add test points to serial lines (I2C/SPI/maybe UART)
--Add filtering to ADC solar/output voltage sense lines
--Add output capacitance to boost converter
+-Change header for SWD to 2.54mm pin header from test points - DONE
+-Add bleeder resistor to supercap - DONE
+-Change HF antenna and solar inputs from 2.54mm headers to screw terminals - WON'T DO
+-Remap I2C for Si5351 to use hardware I2C - DONE
+-Remap SPI for MS5607 to use hardware SPI - DONE
+-Change some 0402s to 0603s for easier soldering - WON'T DO
+-Add inveted F GPS antenna - DONE
+-Add option for UFL port for external GPS antenna - WON'T DO
+-Add test points to serial lines (I2C/SPI/maybe UART) - DONE
+-Add filtering to ADC solar/output voltage sense lines - DONE
+-Add output capacitance to boost converter - DONE
