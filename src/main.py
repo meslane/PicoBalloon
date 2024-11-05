@@ -49,7 +49,10 @@ def adc_avg(adc, counts):
     return adc_sum / counts
 
 while True:
-    print(gps.get_GPGGA_data())
+    gps_dict = gps.get_GPGGA_data()
+    print(gps_dict)
+    print(wspr.LL2GS(gps_dict['lat_deg'], gps_dict['lon_deg']))
+    
     alt_dict = altimeter.get_pressure_and_temperature()
     print(alt_dict)
     

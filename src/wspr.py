@@ -137,6 +137,26 @@ def generate_wspr_message(callsign: str, grid: str, power: int):
         
     return output
 
+def LL2GS(lat, lon):
+    '''
+    Given a latitude and longitude, return a six-digit maidenhead grid square
+    '''
+    char_list = [' '] * 6
+    
+    #longitude in 20 degree increments, latitude in 10 degree increments
+    char_list[0] = chr(ord('A') + int((lon + 180) / 20))
+    char_list[1] = chr(ord('A') + int((lat + 90) / 10))
+    
+    #longitude in 2 degree increments, latitude in 1 degree increments
+    char_list[2] = chr(ord('0') + int((lon % 20) / 2))
+    char_list[3] = chr(ord('0') + int(lat % 10))
+    
+    #longitude in 5' increents, latitude in 2.5' increments
+    char_list[4] = chr(ord('a') + int(((lon % 2) / 2) * 24))
+    char_list[5] = chr(ord('a') + int((lat % 1) * 24))
+    
+    return ''.join(char_list)
+    
 def encode_telemetry():
     '''
     Encode balloon telemetry into the format documented at https://qrp-labs.com/flights/s4#protocol
