@@ -23,11 +23,10 @@ class Balloon:
             
             self.version = config['version']
             self.callsign = config['callsign']
-            self.wspr_band = config['wspr_band']
-            self.wspr_offset = config['wspr_offset']
-            
-            self.pps_count = 0
-            
+            self.band = config['wspr_band']
+            self.offsets = config['wspr_offsets']
+        
+        #GPIO init
         if self.version == "1.0":
             CLKGEN_SCL = 22
             CLKGEN_SDA = 21
@@ -82,7 +81,7 @@ class Balloon:
         if self.version == "1.0":
             clockgen_i2c = machine.SoftI2C(scl=machine.Pin(CLKGEN_SCL),
                                            sda=machine.Pin(CLKGEN_SDA),
-                                           freq=100000, timeout=500000)
+                                           freq=100000, timeout=10000)
         elif self.version == "1.1":
             raise NotImplementedError
         
@@ -94,6 +93,27 @@ class Balloon:
         
         #LED
         self.led = machine.Pin(LED, machine.Pin.OUT)
+        
+        #PPS
+        self.pps_count = 0
+        self.last_pps = 0
+        
+        #WSPR message
+        self.tone_index = 0
+        self.message = []
+        
+        self.offset_index = 0
+        self.output = CLKGEN_CHANNEL
+        
+        #WSPR constants
+        self.tone_period = 683 #ms
+        self.tone_spacing = 1.465 #Hz
+        self.message_length = 162 #tones
+        
+        #Transmit timer
+        self.timer = machine.Timer(period=self.tone_period, mode = machine.Timer.PERIODIC,
+                   callback=None)
+        self.timer.deinit()
         
         #Set state
         self.state = "init"
@@ -113,9 +133,58 @@ class Balloon:
     def pps_interrupt(self, *args):
         self.led.toggle()
         self.pps_count += 1
+    
+    def configure_clockgen(self):
+        '''
+        Set transmit freq and get frontend ready
+        '''
+        success = False
+        
+        while success == False:
+            try:
+                self.clockgen.configure_output_driver(self.output)
+                self.clockgen.enable_output(self.output, False)
+            except OSError:
+                print("I2C Failed")
 
+    def transmit_message(self):
+        '''
+        start timer and begin transmitting
+        '''
+        self.timer.init(period = self.tone_period,
+                        mode = machine.Timer.PERIODIC,
+                        callback = self.transmit_next_tone)
+
+    def transmit_next_tone(self, *args):
+        '''    
+        Transmit the next tone in the message buffer
+        This should be called from a clock interrupt, not directly
+        '''
+        #make sure we got one in the chamber
+        assert len(self.message) == self.message_length
+        assert self.band != None
+        assert self.offsets != None
+        assert self.output != None
+        
+        if self.tone_index >= 162:
+            self.clockgen.enable_output(self.output, False)
+            self.timer.deinit() #message is finished, stop timer
+            self.tone_index = 163
+        else:
+            if self.tone_index == 0:
+                self.clockgen.enable_output(self.output, True)
+            
+            if isinstance(self.offsets, int):
+                tone_offset = self.offsets + (self.message[self.tone_index] * self.tone_spacing)
+            else:
+                tone_offset = self.offsets[self.offset_index] + (self.message[self.tone_index] * self.tone_spacing)
+            
+            self.tone_index += 1
+            self.clockgen.transmit_wspr_tone(self.output, self.band,
+                                             tone_offset, correction=0)
+    
     def tick(self):
-        print(self.state)
+        start_state = self.state
         
         if self.state == "init":
             self.pps_count = 0
@@ -131,6 +200,7 @@ class Balloon:
             gps_dict = self.gps.get_GPGGA_data()
             
             if int(gps_dict['lat_deg']) != 0 or int(gps_dict['lon_deg']) != 0:
+                self.configure_clockgen()
                 self.state = "collect_telemetry"
          
         elif self.state == "collect_telemetry":
@@ -150,6 +220,12 @@ class Balloon:
             self.telemetry['v_solar'] = v_solar
             self.telemetry['v_in'] = v_in
             
+            grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
+            self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
+            
+            print(self.telemetry)
+            print(grid_square)
+            
             self.state = "wait_for_transmit"
 
         elif self.state == "wait_for_transmit":
@@ -160,13 +236,20 @@ class Balloon:
                 self.state = "wait_for_fix"
             else:
                 t_gps = int(gps_dict['t_utc'])
-                print(t_gps)
-                print(t_gps // 100)
                 if ((t_gps // 100) % 2 == 1) and (t_gps % 100 == 59):
                     self.state = "await_pps"
         
         elif self.state == "await_pps":
-            pass
+            if self.pps_count != self.last_pps:
+                self.transmit_message()
+                self.state = "transmit"
         
         elif self.state == "transmit":
-            pass
+            if self.tone_index == 163:
+                self.tone_index = 0
+                self.state = "collect_telemetry"
+        
+        self.last_pps = self.pps_count
+        
+        if self.state != start_state:
+            print("{} - {}".format(self.state, self.pps_count))
