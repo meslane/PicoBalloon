@@ -14,10 +14,12 @@ class LIV3(UART_Device):
         self.reset = reset
         self.pps = pps
         
+        '''
         self.led = machine.Pin(25, machine.Pin.OUT)
         self.led.on()
         
         pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
+        '''
         
         self.reset.value(1) #reset is active low, so set pin to high to force out of reset
         self.wake.value(1) #force wake up

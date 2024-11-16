@@ -151,7 +151,7 @@ def LL2GS(lat, lon):
     char_list[2] = chr(ord('0') + int((lon % 20) / 2))
     char_list[3] = chr(ord('0') + int(lat % 10))
     
-    #longitude in 5' increents, latitude in 2.5' increments
+    #longitude in 5' increments, latitude in 2.5' increments
     char_list[4] = chr(ord('a') + int(((lon % 2) / 2) * 24))
     char_list[5] = chr(ord('a') + int((lat % 1) * 24))
     
