@@ -130,6 +130,10 @@ class Balloon:
                           "l_front": 0.0,
                           "l_back": 0.0}
 
+        #fun!
+        self.loadchars = ['|', '/', '-', '\\']
+        self.char_index = 0
+
     def pps_interrupt(self, *args):
         self.led.toggle()
         self.pps_count += 1
@@ -232,7 +236,10 @@ class Balloon:
         elif self.state == "wait_for_fix":
             gps_dict = self.gps.get_GPGGA_data()
             
-            print("Satellites: {}".format(gps_dict['satellites']), end='\r')
+            print("Satellites: {} {}".format(gps_dict['satellites'],
+                                             self.loadchars[self.char_index]),
+                                             end='\r')
+            self.char_index = self.char_index + 1 if self.char_index < 3 else 0
             
             if int(gps_dict['lat_deg']) != 0 or int(gps_dict['lon_deg']) != 0:
                 print()
