@@ -36,13 +36,8 @@ class LIV3(UART_Device):
         
         while True:
             #await data over UART
-            i = 0
             while self.uart.any() == 0:
-                i += 1
-                time.sleep(0.01)
-                
-                if i > 100:
-                    raise OSError
+                pass
         
             try:
                 uart_str = self.uart.readline().decode("utf-8")

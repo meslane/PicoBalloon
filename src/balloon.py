@@ -129,6 +129,9 @@ class Balloon:
                           "v_solar": 0.0,
                           "l_front": 0.0,
                           "l_back": 0.0}
+        
+        #don't init watchdog to start
+        self.watchdog = None
 
         #fun!
         self.loadchars = ['|', '/', '-', '\\']
@@ -155,11 +158,16 @@ class Balloon:
             pass
         
         #test GPS
-        try:
-            gps_dict = self.gps.get_GPGGA_data()
-            status['LIV3R'] = "PASS"
-        except OSError:
-            pass
+        status['LIV3R'] = "PASS"
+        #await data over UART
+        i = 0
+        while self.gps.uart.any() == 0:
+            i += 1
+            time.sleep(0.01)
+            
+            if i > 100:
+                status['LIV3R'] = "FAIL" #fail if we time out
+                break
         
         #test Altimeter
         try:
@@ -222,21 +230,22 @@ class Balloon:
         
         if self.state == "init":
             self.pps_count = 0
+            #self.watchdog = machine.WDT(timeout=2000) #2s watchdog expiration
             self.state = "wait_for_time"
             
         elif self.state == "wait_for_time":
             gps_dict = self.gps.get_GPGGA_data()
             
-            print(gps_dict['t_utc'], end='\r')
+            print("{}       ".format(gps_dict['t_utc']), end='\r')
             
-            if gps_dict['t_utc'] > (self.pps_count + 10):
+            if gps_dict['t_utc'] > (self.pps_count + 10) and gps_dict['satellites'] > 0:
                 print()
                 self.state = "wait_for_fix"
         
         elif self.state == "wait_for_fix":
             gps_dict = self.gps.get_GPGGA_data()
             
-            print("Satellites: {} {}".format(gps_dict['satellites'],
+            print("Satellites: {} {}       ".format(gps_dict['satellites'],
                                              self.loadchars[self.char_index]),
                                              end='\r')
             self.char_index = self.char_index + 1 if self.char_index < 3 else 0
@@ -267,6 +276,7 @@ class Balloon:
             self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
             
             print(self.telemetry)
+            print(self.callsign)
             print(grid_square)
             
             self.state = "wait_for_transmit"
@@ -296,3 +306,5 @@ class Balloon:
         
         if self.state != start_state:
             print("{} - {}".format(self.state, self.pps_count))
+            
+        #self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
