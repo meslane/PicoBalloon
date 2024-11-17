@@ -25,8 +25,6 @@ class MS5607(SPI_Device):
         self.ROM = []
         for i in range(0,8):
             self.ROM.append(int.from_bytes(self.read_prom(i), "big"))
-            
-        print(self.ROM)
         
     def reset(self):
         '''

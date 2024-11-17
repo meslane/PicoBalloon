@@ -1,4 +1,5 @@
 import machine
+import time
 #from typing import Callable
 
 class UART_Device:
@@ -35,12 +36,16 @@ class LIV3(UART_Device):
         
         while True:
             #await data over UART
+            i = 0
             while self.uart.any() == 0:
-                pass
+                i += 1
+                time.sleep(0.01)
+                
+                if i > 100:
+                    raise OSError
         
             try:
                 uart_str = self.uart.readline().decode("utf-8")
-                #print(uart_str)
             except UnicodeError:
                 uart_str = "000000"
                 
@@ -74,8 +79,6 @@ class LIV3(UART_Device):
             lon_deg *= -1
         
         GPGGA_dict['t_utc'] = float(GPGGA_list[1])
-        #GPGGA_dict['lat_arcmin'] = GPGGA_list[2]
-        #GPGGA_dict['lon_arcmin'] = GPGGA_list[4]
         GPGGA_dict['lat_deg'] = lat_deg
         GPGGA_dict['lon_deg'] = lon_deg
         GPGGA_dict['alt_m'] = float(GPGGA_list[9])

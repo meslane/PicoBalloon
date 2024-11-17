@@ -134,18 +134,48 @@ class Balloon:
         self.led.toggle()
         self.pps_count += 1
     
+    def selftest(self):
+        print("Running Built-In Hardware Self-Test...")
+        
+        status = {"Si5351": "FAIL",
+                   "LIV3R": "FAIL",
+                   "MS5607": "FAIL"}
+        
+        #test clockgen
+        try:
+            self.clockgen.i2c_write(0x19, 0x77)
+            if self.clockgen.i2c_read(0x19) == 0x77:
+                status['Si5351'] = "PASS"
+            self.clockgen.i2c_write(0x19, 0x00)
+        except OSError:
+            pass
+        
+        #test GPS
+        try:
+            gps_dict = self.gps.get_GPGGA_data()
+            status['LIV3R'] = "PASS"
+        except OSError:
+            pass
+        
+        #test Altimeter
+        try:
+            prom = int.from_bytes(self.altimeter.read_prom(0), "big")
+            if prom != 0x0000 and prom != 0xFFFF:
+                status['MS5607'] = "PASS"
+        except OSError:
+            pass
+        
+        for key in status.keys():
+            print("{} - {}".format(key, status[key]))
+        
+        return status
+    
     def configure_clockgen(self):
         '''
         Set transmit freq and get frontend ready
         '''
-        success = False
-        
-        while success == False:
-            try:
-                self.clockgen.configure_output_driver(self.output)
-                self.clockgen.enable_output(self.output, False)
-            except OSError:
-                print("I2C Failed")
+        self.clockgen.configure_output_driver(self.output)
+        self.clockgen.enable_output(self.output, False)
 
     def transmit_message(self):
         '''
@@ -193,13 +223,19 @@ class Balloon:
         elif self.state == "wait_for_time":
             gps_dict = self.gps.get_GPGGA_data()
             
+            print(gps_dict['t_utc'], end='\r')
+            
             if gps_dict['t_utc'] > (self.pps_count + 10):
+                print()
                 self.state = "wait_for_fix"
         
         elif self.state == "wait_for_fix":
             gps_dict = self.gps.get_GPGGA_data()
             
+            print("Satellites: {}".format(gps_dict['satellites']), end='\r')
+            
             if int(gps_dict['lat_deg']) != 0 or int(gps_dict['lon_deg']) != 0:
+                print()
                 self.configure_clockgen()
                 self.state = "collect_telemetry"
          
