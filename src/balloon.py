@@ -25,6 +25,7 @@ class Balloon:
             self.callsign = config['callsign']
             self.band = config['wspr_band']
             self.offsets = config['wspr_offsets']
+            self.tx_correction = config['tx_correction']
         
         #GPIO init
         if self.version == "1.0":
@@ -223,7 +224,7 @@ class Balloon:
             
             self.tone_index += 1
             self.clockgen.transmit_wspr_tone(self.output, self.band,
-                                             tone_offset, correction=0)
+                                             tone_offset, correction=self.tx_correction)
     
     def tick(self):
         start_state = self.state
