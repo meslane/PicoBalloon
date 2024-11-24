@@ -32,6 +32,7 @@ class Balloon:
             CLKGEN_SCL = 22
             CLKGEN_SDA = 21
             CLKGEN_CHANNEL = 0
+            CLKGEN_OUTPUT = 0
             
             GPS_TX = 16
             GPS_RX = 17
@@ -50,9 +51,34 @@ class Balloon:
             V_IN_ADC_IN = 26
             V_SOLAR_ADC_IN = 27
         elif self.version == "1.1":
+            CLKGEN_SDA = 20
+            CLKGEN_SCL = 21
+            CLKGEN_CHANNEL = 0
+            CLKGEN_OUTPUT = 0
+            
+            GPS_TX = 16
+            GPS_RX = 17
+            GPS_WAKE = 15
+            GPS_RESET = 14
+            GPS_PPS = 18
+            GPS_CHANNEL = 0
+            
+            ALTIMETER_MOSI = 3
+            ALTIMETER_MISO = 4
+            ALTIMETER_SCK = 2
+            ALTIMETER_CS = 5
+            ALTIMETER_CHANNEL = 0
+            
+            LED = 25
+            
+            V_IN_ADC_IN = 27
+            V_SOLAR_ADC_IN = 26
+            V_LSENS_BOT_ADC_IN = 28
+            V_LSENS_TOP_ADC_IN = 29
+        else:
             raise NotImplementedError
 
-        #GPS Init + Interrupt
+        #GPS Init
         gps_uart = machine.UART(GPS_CHANNEL, baudrate=9600,
                         tx=machine.Pin(GPS_TX), rx=machine.Pin(GPS_RX), timeout=100)
         gps_wake = machine.Pin(GPS_WAKE, machine.Pin.OUT)
@@ -60,8 +86,6 @@ class Balloon:
         self.gps_pps = machine.Pin(GPS_PPS, machine.Pin.IN)
         self.gps = uart_device.LIV3(gps_uart, wake=gps_wake, reset=gps_reset,
                                pps=self.gps_pps)
-        
-        self.gps_pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
         
         #Altimeter Init
         if self.version == "1.0":
@@ -74,6 +98,16 @@ class Balloon:
                 mosi=machine.Pin(ALTIMETER_MOSI),
                 miso=machine.Pin(ALTIMETER_MISO)) 
         elif self.version == "1.1":
+            altimeter_spi = machine.SPI(baudrate=100000,
+                polarity=0,
+                phase=0,
+                firstbit=machine.SPI.MSB,
+                bits=8,
+                id=ALTIMETER_CHANNEL,
+                sck=machine.Pin(ALTIMETER_SCK),
+                mosi=machine.Pin(ALTIMETER_MOSI),
+                miso=machine.Pin(ALTIMETER_MISO))
+        else:
             raise NotImplementedError
         
         self.altimeter = spi_device.MS5607(altimeter_spi, machine.Pin(ALTIMETER_CS, machine.Pin.OUT))
@@ -84,13 +118,20 @@ class Balloon:
                                            sda=machine.Pin(CLKGEN_SDA),
                                            freq=100000, timeout=10000)
         elif self.version == "1.1":
-            raise NotImplementedError
+            clockgen_i2c = machine.I2C(id=CLKGEN_CHANNEL,
+                                       scl=machine.Pin(CLKGEN_SCL),
+                                       sda=machine.Pin(CLKGEN_SDA),
+                                       freq=100000, timeout=10000)
+        else:
+            raise NotImplementedError        
         
         self.clockgen = i2c_device.SI5351(clockgen_i2c)
         
         #ADC Init
         self.v_in_adc = machine.ADC(V_IN_ADC_IN)
         self.v_solar_adc = machine.ADC(V_SOLAR_ADC_IN)
+        self.l_front_adc = machine.ADC(V_LSENS_TOP_ADC_IN)
+        self.l_back_adc = machine.ADC(V_LSENS_BOT_ADC_IN)
         
         #LED
         self.led = machine.Pin(LED, machine.Pin.OUT)
@@ -104,7 +145,7 @@ class Balloon:
         self.message = []
         
         self.offset_index = 0
-        self.output = CLKGEN_CHANNEL
+        self.output = CLKGEN_OUTPUT
         
         #WSPR constants
         self.tone_period = 683 #ms
@@ -137,6 +178,9 @@ class Balloon:
         #fun!
         self.loadchars = ['|', '/', '-', '\\']
         self.char_index = 0
+        
+        #start GPS interrupt only after everything else succeeds
+        self.gps_pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
 
     def pps_interrupt(self, *args):
         self.led.toggle()
@@ -237,6 +281,7 @@ class Balloon:
         elif self.state == "wait_for_time":
             gps_dict = self.gps.get_GPGGA_data()
             
+            #print(gps_dict)
             print("{}       ".format(gps_dict['t_utc']), end='\r')
             
             if gps_dict['t_utc'] > (self.pps_count + 10) and gps_dict['satellites'] > 0:
@@ -261,6 +306,8 @@ class Balloon:
             alt_dict = self.altimeter.get_pressure_and_temperature()
             v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536)
             v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536)
+            l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536)
+            l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536)
             
             self.telemetry['lat_deg'] = gps_dict['lat_deg']
             self.telemetry['lon_deg'] = gps_dict['lon_deg']
@@ -272,6 +319,8 @@ class Balloon:
             
             self.telemetry['v_solar'] = v_solar
             self.telemetry['v_in'] = v_in
+            self.telemetry['l_front'] = l_front
+            self.telemetry['l_back'] = l_back
             
             grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
             self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
