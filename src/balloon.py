@@ -325,16 +325,25 @@ class Balloon:
                 self.state = "collect_telemetry"
          
         elif self.state == "collect_telemetry":
-            self.update_telemetry()
-            print(self.telemetry)
+            t_now = self.gps.get_GPGGA_data()['t_utc']
             
             #do normal WSPR message
-            if (self.config["telemetry_mode"] == "WSPR") or (self.config["telemetry_mode"] == "U4B" and (int(self.telemetry['t_utc']) // 100) % 4 == 0):
+            if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 4 >= 2):
+                #update telemetry only once every 4 minutes to avoid tears in location
+                self.update_telemetry()
+                print(self.telemetry)
+                
                 grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
                 self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
                 print("{} {} {}".format(self.callsign, grid_square, 10))
-            #transmit U4B telemetry
-            elif (self.config["telemetry_mode"] == "U4B" and (int(self.telemetry['t_utc']) // 100) % 4 == 2):
+            
+            #transmit U4B telemetry every other message
+            elif (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 4 < 2):
+                #grab telem if at beginning so we know we have good data
+                if self.telemetry['v_solar'] == 0 and self.telemetry['v_in'] == 0:
+                    self.update_telemetry()
+                    print(self.telemetry)
+                
                 subsquare = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[-2:]
 
                 #define GPS = healthy if it sees at least 8 satellites
@@ -350,7 +359,7 @@ class Balloon:
                 else:
                     board_orientation = 0
 
-                callsign = wspr.encode_subsquare_and_altitude_telemetry(subsquare, self.telemetry['alt_m'])
+                callsign = wspr.encode_subsquare_and_altitude_telemetry(self.telemetry_call, subsquare, int(self.telemetry['alt_m']))
                 gs_and_power = wspr.encode_engineering_telemetry(self.telemetry['temp_c'],
                                                                  self.telemetry['v_solar'] + 2, #get this into the range U4B expects
                                                                  0, #TODO: encode groundspeed here

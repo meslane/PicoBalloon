@@ -177,11 +177,9 @@ def encode_subsquare_and_altitude_telemetry(callsign_channel: str, subsquare: st
     c1_int = ord(subsquare[0].lower()) - 97 #must be lowercase
     c2_int = ord(subsquare[1].lower()) - 97
     
-    telem_int = (((c1_int * 24) + c2_int) * 1068) + (altitude // 20)
-    print(telem_int)
-
+    telem_int = (((c1_int * 24) + c2_int) * 1068) + (int(altitude) // 20)
     callsign_1_int = (telem_int // 17576) % 36
-    print(callsign_1_int)
+
     if callsign_1_int < 10:
         callsign[1] = chr(ord('0') + callsign_1_int)
     else:
@@ -227,9 +225,9 @@ def encode_engineering_telemetry(temperature: int,
         gps_health = 1
     
     #format into range expected
-    temperature += 50
+    temperature = int(temperature + 50)
     voltage = round((voltage - 3) / 0.05)
-    speed //= 2
+    speed = int(speed // 2)
     
     #convert to int
     telem_int = gps_health + 2 * (gps_valid + 2 * (speed + 42 * (voltage + 40 * temperature)))
