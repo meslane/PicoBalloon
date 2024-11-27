@@ -26,6 +26,8 @@ class Balloon:
             self.band = config['wspr_band']
             self.offsets = config['wspr_offsets']
             self.tx_correction = config['tx_correction']
+            self.telemetry_mode = config['telemetry_mode']
+            self.telemetry_call = config['telemetry_call']
         
         #GPIO init
         if self.version == "1.0":
@@ -269,6 +271,27 @@ class Balloon:
             self.tone_index += 1
             self.clockgen.transmit_wspr_tone(self.output, self.band,
                                              tone_offset, correction=self.tx_correction)
+    def update_telemetry(self):
+        gps_dict = self.gps.get_GPGGA_data()
+        alt_dict = self.altimeter.get_pressure_and_temperature()
+        v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536)
+        v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536)
+        l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536)
+        l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536)
+        
+        self.telemetry['lat_deg'] = gps_dict['lat_deg']
+        self.telemetry['lon_deg'] = gps_dict['lon_deg']
+        self.telemetry['t_utc'] = gps_dict['t_utc']
+        self.telemetry['alt_m'] = gps_dict['alt_m']
+        self.telemetry['satellites'] = gps_dict['satellites']
+        
+        self.telemetry['temp_c'] = alt_dict['t_c']
+        self.telemetry['p_mbar'] = alt_dict['p_mbar']
+        
+        self.telemetry['v_solar'] = v_solar
+        self.telemetry['v_in'] = v_in
+        self.telemetry['l_front'] = l_front
+        self.telemetry['l_back'] = l_back
     
     def tick(self):
         start_state = self.state
@@ -302,32 +325,40 @@ class Balloon:
                 self.state = "collect_telemetry"
          
         elif self.state == "collect_telemetry":
-            gps_dict = self.gps.get_GPGGA_data()
-            alt_dict = self.altimeter.get_pressure_and_temperature()
-            v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536)
-            v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536)
-            l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536)
-            l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536)
-            
-            self.telemetry['lat_deg'] = gps_dict['lat_deg']
-            self.telemetry['lon_deg'] = gps_dict['lon_deg']
-            self.telemetry['alt_m'] = gps_dict['alt_m']
-            self.telemetry['satellites'] = gps_dict['satellites']
-            
-            self.telemetry['temp_c'] = alt_dict['t_c']
-            self.telemetry['p_mbar'] = alt_dict['p_mbar']
-            
-            self.telemetry['v_solar'] = v_solar
-            self.telemetry['v_in'] = v_in
-            self.telemetry['l_front'] = l_front
-            self.telemetry['l_back'] = l_back
-            
-            grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
-            self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
-            
+            self.update_telemetry()
             print(self.telemetry)
-            print(self.callsign)
-            print(grid_square)
+            
+            #do normal WSPR message
+            if (self.config["telemetry_mode"] == "WSPR") or (self.config["telemetry_mode"] == "U4B" and (int(self.telemetry['t_utc']) // 100) % 4 == 0):
+                grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
+                self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
+                print("{} {} {}".format(self.callsign, grid_square, 10))
+            #transmit U4B telemetry
+            elif (self.config["telemetry_mode"] == "U4B" and (int(self.telemetry['t_utc']) // 100) % 4 == 2):
+                subsquare = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[-2:]
+
+                #define GPS = healthy if it sees at least 8 satellites
+                if self.telemetry['satellites'] >= 8:
+                    gps_health = 1
+                else:
+                    gps_health = 0
+                    
+                #encode which brightness sensor is reading higher as the normal U4B GPS status flag
+                #this will give us a very coarse reading on which direction the tracker is facing
+                if self.telemetry['l_front'] >= self.telemetry['l_back']:
+                    board_orientation = 1
+                else:
+                    board_orientation = 0
+
+                callsign = wspr.encode_subsquare_and_altitude_telemetry(subsquare, self.telemetry['alt_m'])
+                gs_and_power = wspr.encode_engineering_telemetry(self.telemetry['temp_c'],
+                                                                 self.telemetry['v_solar'] + 2, #get this into the range U4B expects
+                                                                 0, #TODO: encode groundspeed here
+                                                                 board_orientation,
+                                                                 gps_health)
+                
+                self.message = wspr.generate_wspr_message(callsign, gs_and_power[0], gs_and_power[1])
+                print("{} {} {}".format(callsign, gs_and_power[0], gs_and_power[1]))
             
             self.state = "wait_for_transmit"
 
@@ -358,3 +389,7 @@ class Balloon:
             print("{} - {}".format(self.state, self.pps_count))
             
         #self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
+            
+    def print_telemetry(self):
+        self.update_telemetry()
+        print(self.telemetry)

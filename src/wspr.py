@@ -157,141 +157,89 @@ def LL2GS(lat, lon):
     
     return ''.join(char_list)
     
-def encode_telemetry():
+def encode_subsquare_and_altitude_telemetry(callsign_channel: str, subsquare: str, altitude: int):
     '''
     Encode balloon telemetry into the format documented at https://qrp-labs.com/flights/s4#protocol
+    Also see: https://traquito.github.io/faq/channels
+    
+    Args:
+        callsign_channel: a 2 char string designating which letter/number combination to use for channelizing telemetry over WSPR
+        subsquare: a 2 char string containing the last two characters of the balloon's extended 6 character maidenhead grid square
+        altitude: the balloon's altitude in meters
     '''
-    #TODO
-    return
+    assert callsign_channel[0] == 'Q' or callsign_channel[0] == '0'
+    assert ord(callsign_channel[1]) - 48 < 10 #second char must be an integer
+    
+    callsign = [' ', ' ', ' ', ' ', ' ', ' ']
+    callsign[0] = callsign_channel[0]
+    callsign[2] = callsign_channel[1]
+    
+    c1_int = ord(subsquare[0].lower()) - 97 #must be lowercase
+    c2_int = ord(subsquare[1].lower()) - 97
+    
+    telem_int = (((c1_int * 24) + c2_int) * 1068) + (altitude // 20)
+    print(telem_int)
 
-class Beacon:
-    def __init__(self, i2c: machine.I2C, uart: machine.UART, pps: machine.Pin):
-        #constants
-        self.tone_period = 683 #ms
-        self.tone_spacing = 1.465 #Hz
-        self.message_length = 162 #tones
-        
-        self.clockgen = i2c_device.SI5351(i2c)
-        self.gps = uart_device.TEL0132(uart)
-        self.timer = machine.Timer(period=self.tone_period, mode = machine.Timer.PERIODIC,
-                   callback=None)
-        self.timer.deinit()
-        
-        #GPS PPS output
-        self.pps = pps
-        self.pps_count = 0
-        self.last_pps = 0
-        pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
-        
-        self.led = machine.Pin(25, machine.Pin.OUT)
-        self.led.off()
-        
-        self.tone_index = 0
-        self.message = []
-        
-        self.band = None
-        self.offsets = None
-        self.offset_index = 0
-        self.output = None
-        
-        self.state = "init"
+    callsign_1_int = (telem_int // 17576) % 36
+    print(callsign_1_int)
+    if callsign_1_int < 10:
+        callsign[1] = chr(ord('0') + callsign_1_int)
+    else:
+        callsign[1] = chr(ord('A') + (callsign_1_int - 10))
     
-    def generate_message(self, callsign: str, grid: str, power: str):
-        self.message = generate_wspr_message(callsign, grid, power)
+    callsign[3] = chr(ord('A') + (telem_int // 676) % 26)
+    callsign[4] = chr(ord('A') + (telem_int // 26) % 26)
+    callsign[5] = chr(ord('A') + telem_int % 26)
     
-    def configure_clockgen(self, band: str, offsets: tuple[int], output: int = 1):
-        '''
-        Set transmit freq and get frontend ready
-        '''
-        self.band = band
-        self.offsets = offsets
-        self.output = output
-        
-        self.clockgen.configure_output_driver(self.output)
-        self.clockgen.enable_output(self.output, False)
-        
-    def transmit_next_tone(self, *args):
-        '''    
-        Transmit the next tone in the message buffer
-        This should be called from a clock interrupt, not directly
-        '''
-        #make sure we got one in the chamber
-        assert len(self.message) == self.message_length
-        assert self.band != None
-        assert self.offsets != None
-        assert self.output != None
-        
-        if self.tone_index >= 162:
-            self.clockgen.enable_output(self.output, False)
-            self.timer.deinit() #message is finished, stop timer
-            self.tone_index = 163
-        else:
-            if self.tone_index == 0:
-                self.clockgen.enable_output(self.output, True)
-            
-            if isinstance(self.offsets, int):
-                tone_offset = self.offsets + (self.message[self.tone_index] * self.tone_spacing)
-            else:
-                tone_offset = self.offsets[self.offset_index] + (self.message[self.tone_index] * self.tone_spacing)
-            
-            self.tone_index += 1
-            self.clockgen.transmit_wspr_tone(self.output, self.band,
-                                             tone_offset, correction=0)
-        
-    def transmit_message(self):
-        '''
-        start timer and begin transmitting
-        '''
-        self.timer.init(period = self.tone_period,
-                        mode = machine.Timer.PERIODIC,
-                        callback = self.transmit_next_tone)
-    
-    def pps_interrupt(self, *args):
-        self.led.toggle()
-        self.pps_count += 1
-    
-    def run(self):
-        start_state = self.state
-        
-        #state machine
-        if self.state == "init":
-            self.state = "no_fix"
-            
-        elif self.state == "no_fix":
-            if self.pps_count != self.last_pps:
-                self.state = "wait_for_transmit"
-                
-        elif self.state == "wait_for_transmit":
-            gps_time = self.gps.get_time_and_position()[0]
-            
-            if gps_time == "N/A":
-                self.state = "no_fix"
-            else: #if have a fix
-                #trigger on rising PPS pulse to transmit at the start of the minute
-                if int(gps_time[4]) % 2 == 1 and int(gps_time[6:8]) == 59:
-                    #pick next offset
-                    if isinstance(self.offsets, int):
-                        self.offset_index = 0
-                        print("offset = {}".format(self.offsets))
-                    else:
-                        self.offset_index = random.randint(0, len(self.offsets) - 1) #pick new random offset from list
-                        print("offset = {}".format(self.offsets[self.offset_index]))
-                    
-                    self.state = "await_pps"
-                    
-        elif self.state == "await_pps":
-            if self.pps_count != self.last_pps:
-                self.transmit_message() #begin transmission
-                self.state = "transmit"
+    return "".join(callsign)
 
-        elif self.state == "transmit":
-            if self.tone_index == 163:
-                self.tone_index = 0
-                self.state = "wait_for_transmit"
-                
-        self.last_pps = self.pps_count
+def encode_engineering_telemetry(temperature: int,
+                                 voltage: float,
+                                 speed: int,
+                                 gps_valid: int,
+                                 gps_health: int):
+    '''
+    Encode ballon telemetry into the U4B telem format
+    '''
+    power_lut = [0,3,7,10,13,17,
+                 20,23,27,30,33,37,
+                 40,43,47,50,53,37,60]
+    
+    #force inputs into correct ranges
+    if temperature > 39:
+        temperature = 39
+    elif temperature < -50:
+        temperature = -50
         
-        if self.state != start_state:
-            print("{} - {}".format(self.state, self.pps_count))
-        
-        time.sleep(0.01)
+    if voltage < 3.00:
+        voltage = 3.00
+    elif voltage > 4.95:
+        voltage = 4.95
+    
+    if speed > 82:
+        speed = 82
+    elif speed < 0:
+        speed = 0
+    
+    if gps_valid != 0:
+        gps_valid = 1
+    if gps_health != 0:
+        gps_health = 1
+    
+    #format into range expected
+    temperature += 50
+    voltage = round((voltage - 3) / 0.05)
+    speed //= 2
+    
+    #convert to int
+    telem_int = gps_health + 2 * (gps_valid + 2 * (speed + 42 * (voltage + 40 * temperature)))
+
+    #encode int into grid square + power level
+    power = power_lut[telem_int % 19]
+    grid_square = [' ', ' ', ' ', ' ']
+    grid_square[3] = chr(ord('0') + (telem_int // 19) % 10)
+    grid_square[2] = chr(ord('0') + (telem_int // 190) % 10)
+    grid_square[1] = chr(ord('A') + (telem_int // 1900) % 18)
+    grid_square[0] = chr(ord('A') + (telem_int // 34200) % 18)
+    
+    return (''.join(grid_square), power)

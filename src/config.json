@@ -3,5 +3,7 @@
 	"callsign": "W6NXP",
 	"wspr_band": "20m",
 	"wspr_offsets": [115],
-	"tx_correction": -471
+	"tx_correction": -471,
+	"telemetry_mode": "U4B",
+	"telemetry_call": "Q2"
 }
