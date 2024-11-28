@@ -28,6 +28,7 @@ class Balloon:
             self.tx_correction = config['tx_correction']
             self.telemetry_mode = config['telemetry_mode']
             self.telemetry_call = config['telemetry_call']
+            self.log_to_file = config['log_to_file']
         
         #GPIO init
         if self.version == "1.0":
@@ -326,6 +327,7 @@ class Balloon:
          
         elif self.state == "collect_telemetry":
             t_now = self.gps.get_GPGGA_data()['t_utc']
+            wspr_text = ""
             
             #do normal WSPR message
             if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 4 >= 2):
@@ -335,7 +337,8 @@ class Balloon:
                 
                 grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
                 self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
-                print("{} {} {}".format(self.callsign, grid_square, 10))
+                wspr_text = "{} {} {}".format(self.callsign, grid_square, 10)
+                print(wspr_text)
             
             #transmit U4B telemetry every other message
             elif (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 4 < 2):
@@ -367,7 +370,12 @@ class Balloon:
                                                                  gps_health)
                 
                 self.message = wspr.generate_wspr_message(callsign, gs_and_power[0], gs_and_power[1])
-                print("{} {} {}".format(callsign, gs_and_power[0], gs_and_power[1]))
+                wspr_text = "{} {} {}".format(callsign, gs_and_power[0], gs_and_power[1])
+                print(wspr_text)
+            
+            if self.log_to_file == True:
+                with open("log.csv", "a") as f:
+                    f.write("{}, {}\n".format(t_now, wspr_text))
             
             self.state = "wait_for_transmit"
 
