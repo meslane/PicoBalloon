@@ -29,6 +29,12 @@ class Balloon:
             self.telemetry_mode = config['telemetry_mode']
             self.telemetry_call = config['telemetry_call']
             self.log_to_file = config['log_to_file']
+            
+            #mod 10 of the time in minutes, determines when telemetry is sent in accordance with https://traquito.github.io/channelmap/
+            if config['telemetry_minute'] > 0:
+                self.telemetry_minute = config['telemetry_minute'] - 1
+            else:
+                self.telemetry_minute = 9
         
         #GPIO init
         if self.version == "1.0":
@@ -330,7 +336,7 @@ class Balloon:
             wspr_text = ""
             
             #do normal WSPR message
-            if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 4 >= 2):
+            if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 10 != self.telemetry_minute):
                 #update telemetry only once every 4 minutes to avoid tears in location
                 self.update_telemetry()
                 print(self.telemetry)
@@ -341,7 +347,7 @@ class Balloon:
                 print(wspr_text)
             
             #transmit U4B telemetry every other message
-            elif (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 4 < 2):
+            elif (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 10 == self.telemetry_minute):
                 #grab telem if at beginning so we know we have good data
                 if self.telemetry['v_solar'] == 0 and self.telemetry['v_in'] == 0:
                     self.update_telemetry()
