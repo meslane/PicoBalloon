@@ -6,6 +6,15 @@ class UART_Device:
     def __init__(self, uart: machine.UART):
         self.uart = uart
         
+    def get_line(self):
+        #await data over UART
+        try:
+            uart_str = self.uart.readline().decode("utf-8")
+        except (UnicodeError, AttributeError) as e:
+            uart_str = ""
+            
+        return uart_str
+        
 class LIV3(UART_Device):
     def __init__(self, uart: machine.UART,
                  wake: machine.Pin, reset: machine.Pin,
@@ -48,6 +57,7 @@ class LIV3(UART_Device):
                 break
         
         #split all data into list
+        '''
         c_buffer = []
         GPGGA_list = []
         for char in uart_str:
@@ -56,7 +66,9 @@ class LIV3(UART_Device):
             else:
                 GPGGA_list.append(''.join(c_buffer))
                 c_buffer = []
-                
+        '''
+        GPGGA_list = uart_str.split(',')
+        
         GPGGA_dict = {}
         
         lat_arcmin = float(GPGGA_list[2])
@@ -81,6 +93,66 @@ class LIV3(UART_Device):
         GPGGA_dict['satellites'] = int(GPGGA_list[7])
         
         return GPGGA_dict
+        
+    def get_GPRMC_data(self):
+        '''
+        Block and await GPRMC string over UART from GPS module
+        
+        Returns:
+            dict containing all GPRMC info
+        '''
+                #flush potentially stale data
+        if self.uart.any() > 0:
+            self.uart.flush()
+        
+        while True:
+            #await data over UART
+            while self.uart.any() == 0:
+                pass
+        
+            try:
+                uart_str = self.uart.readline().decode("utf-8")
+            except UnicodeError:
+                uart_str = "000000"
+                
+            if uart_str[0:6] == '$GPRMC':
+                break
+            
+        GPRMC_list = uart_str.split(',')
+        GPRMC_dict = {}
+        
+        lat_arcmin = float(GPRMC_list[3])
+        lon_arcmin = float(GPRMC_list[5])
+        
+        lat_remainder = (lat_arcmin % 100) / 60
+        lon_remainder = (lon_arcmin % 100) / 60
+        
+        lat_deg = float(int(lat_arcmin / 100)) + lat_remainder
+        lon_deg = float(int(lon_arcmin / 100)) + lon_remainder
+        
+        if GPRMC_list[4] == 'S':
+            lat_deg *= -1
+        if GPRMC_list[6] == 'W':
+            lon_deg *= -1
+        
+        try:
+            mag_var = float(GPRMC_list[10])
+        except ValueError:
+            mag_var = 0
+        
+        if GPRMC_list[11] == 'E':
+            mag_var *= -1
+        
+        GPRMC_dict['t_utc'] = float(GPRMC_list[1])
+        GPRMC_dict['pos_status'] = GPRMC_list[2]
+        GPRMC_dict['lat_deg'] = lat_deg
+        GPRMC_dict['lon_deg'] = lon_deg
+        GPRMC_dict['groundspeed_kn'] = float(GPRMC_list[7])
+        GPRMC_dict['track_deg'] = float(GPRMC_list[8])
+        GPRMC_dict['date_utc'] = int(GPRMC_list[9])
+        GPRMC_dict['mag_var_deg'] = mag_var
+        
+        return GPRMC_dict
         
 class TEL0132(UART_Device):
     def __init__(self, uart: machine.UART):

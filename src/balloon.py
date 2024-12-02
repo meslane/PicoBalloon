@@ -279,6 +279,7 @@ class Balloon:
             self.clockgen.transmit_wspr_tone(self.output, self.band,
                                              tone_offset, correction=self.tx_correction)
     def update_telemetry(self):
+        gprmc_dict = self.gps.get_GPRMC_data()
         gps_dict = self.gps.get_GPGGA_data()
         alt_dict = self.altimeter.get_pressure_and_temperature()
         v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536)
@@ -291,6 +292,7 @@ class Balloon:
         self.telemetry['t_utc'] = gps_dict['t_utc']
         self.telemetry['alt_m'] = gps_dict['alt_m']
         self.telemetry['satellites'] = gps_dict['satellites']
+        self.telemetry['groundspeed_kn'] = gprmc_dict['groundspeed_kn']
         
         self.telemetry['temp_c'] = alt_dict['t_c']
         self.telemetry['p_mbar'] = alt_dict['p_mbar']
@@ -332,7 +334,10 @@ class Balloon:
                 self.state = "collect_telemetry"
          
         elif self.state == "collect_telemetry":
-            t_now = self.gps.get_GPGGA_data()['t_utc']
+            gprmc_dict = self.gps.get_GPRMC_data()
+            
+            d_now = gprmc_dict['date_utc']
+            t_now = gprmc_dict['t_utc']
             wspr_text = ""
             
             #do normal WSPR message
@@ -371,7 +376,7 @@ class Balloon:
                 callsign = wspr.encode_subsquare_and_altitude_telemetry(self.telemetry_call, subsquare, int(self.telemetry['alt_m']))
                 gs_and_power = wspr.encode_engineering_telemetry(self.telemetry['temp_c'],
                                                                  self.telemetry['v_solar'] + 2, #get this into the range U4B expects
-                                                                 0, #TODO: encode groundspeed here
+                                                                 self.telemetry['groundspeed_kn'],
                                                                  board_orientation,
                                                                  gps_health)
                 
@@ -381,7 +386,7 @@ class Balloon:
             
             if self.log_to_file == True:
                 with open("log.csv", "a") as f:
-                    f.write("{}, {}\n".format(t_now, wspr_text))
+                    f.write("{},{},{}\n".format(d_now, t_now, wspr_text))
             
             self.state = "wait_for_transmit"
 
