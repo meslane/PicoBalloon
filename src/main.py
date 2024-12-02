@@ -5,7 +5,7 @@ import sys
 import select
 
 def main():
-    b = balloon.Balloon("config.json")
+    b = balloon.Balloon("config.json", "geofence.json")
 
     hw_status = b.selftest()
     

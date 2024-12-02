@@ -17,7 +17,7 @@ def adc_avg(adc, counts):
     return adc_sum / counts
 
 class Balloon:
-    def __init__(self, config_file):
+    def __init__(self, config_file, geofence_file):
         with open(config_file, "r") as f:
             config = json.load(f)
             
@@ -35,6 +35,9 @@ class Balloon:
                 self.telemetry_minute = config['telemetry_minute'] - 1
             else:
                 self.telemetry_minute = 9
+        
+        with open(geofence_file) as f:
+            self.geofence = json.load(f)
         
         #GPIO init
         if self.version == "1.0":
@@ -302,6 +305,16 @@ class Balloon:
         self.telemetry['l_front'] = l_front
         self.telemetry['l_back'] = l_back
     
+    def is_geofenced(self):
+        for fence in self.geofence.keys():
+            fence_coords = self.geofence[fence]
+            #fence coordinate pairs are (top, left), (bottom, right)
+            if fence_coords[1][0] <= self.telemetry['lat_deg'] <= fence_coords[0][0]:
+                if fence_coords[0][1] <= self.telemetry['lon_deg'] <= fence_coords[1][1]:
+                    return True
+                
+        return False
+    
     def tick(self):
         start_state = self.state
         
@@ -388,7 +401,10 @@ class Balloon:
                 with open("log.csv", "a") as f:
                     f.write("{},{},{}\n".format(d_now, t_now, wspr_text))
             
-            self.state = "wait_for_transmit"
+            if self.is_geofenced():
+                self.state = "geofenced"
+            else:
+                self.state = "wait_for_transmit"
 
         elif self.state == "wait_for_transmit":
             gps_dict = self.gps.get_GPGGA_data()
@@ -400,6 +416,9 @@ class Balloon:
                 t_gps = int(gps_dict['t_utc'])
                 if ((t_gps // 100) % 2 == 1) and (t_gps % 100 == 59):
                     self.state = "await_pps"
+        
+        elif self.state == "geofenced":
+            self.state = "collect_telemetry"
         
         elif self.state == "await_pps":
             if self.pps_count != self.last_pps:
