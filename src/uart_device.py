@@ -71,6 +71,8 @@ class LIV3(UART_Device):
         
         GPGGA_dict = {}
         
+        # TODO: figure out why this errored
+        # Add error handling
         lat_arcmin = float(GPGGA_list[2])
         lon_arcmin = float(GPGGA_list[4])
         
@@ -101,7 +103,7 @@ class LIV3(UART_Device):
         Returns:
             dict containing all GPRMC info
         '''
-                #flush potentially stale data
+        #flush potentially stale data
         if self.uart.any() > 0:
             self.uart.flush()
         

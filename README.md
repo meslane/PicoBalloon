@@ -1,3 +1,11 @@
+```
+###  ###  ##  #  ##   #  #   #    #   #  ##      # # ###   ###
+#  #  #  #   # # # # # # #   #   # # # # # #     # #   #   # #
+###   #  #   # # ##  ### #   #   # # # # # #     # # ###   # #
+#     #  #   # # # # # # #   #   # # # # # #     # # #     # #
+#    ###  ##  #  ##  # # ### ###  #   #  # #      #  ### # ###
+```
+
 # Hardware Details
 
 ## RP2040
@@ -23,11 +31,11 @@ warm up for approximately 30 minutes to ensure transmission accuracy.
 ## TESEO LIV3R GPS
 
 ### PIN MAPPINGS
--UART TX = GPIO16
--UART RX = GPIO17
--WAKE = GPIO15
--RESET = GPIO14
--PPS = GPIO18
+- UART TX = GPIO16
+- UART RX = GPIO17
+- WAKE = GPIO15
+- RESET = GPIO14
+- PPS = GPIO18
 
 ## MS5607 Altimeter
 
@@ -62,9 +70,17 @@ environment by approx. 10C - 20C.
 ## v1.1 -> v2.0 Hardware Changelog
 
 - Switch to 5V -> 3.3V buck converter to enable use of higher voltage solar cells
+- Delete the 5V -> 2.5V LDO and power the converter directly off the +5V USB source instead
 - Delete the GPS LNA + filter and direct connect antenna to the RF_IN pin on the GPS module
 	- This is fine because there is little routing loss and therefore low NF degradation between the module and antenna
 	- Antenna will have the rolloff of a 1st order bandpass filter for out of band rejection
 - Add dedicated through hole pin for a wire antenna as a backup in case the inverted F antenna doesn't work
 - Add soldermask opening on inverted F to allow cutting + soldering GND
 - Update silkscreen to add pinout labels for debug header + V_SOLAR input voltage range
+
+## v2.0 -> v2.1 Hardware Changelog
+
+- Add voltage dividers to power rail ADC telemetry lines
+
+# Telemetry System
+This balloon supports the use of the U4B telemetry system: https://qrp-labs.com/flights/s4#protocol
