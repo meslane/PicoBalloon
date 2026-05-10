@@ -384,42 +384,44 @@ class Balloon:
             t_now = gprmc_dict['t_utc']
             wspr_text = ""
             
-            #do normal WSPR message
+            # Do normal WSPR message
             if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 10 != self.telemetry_minute):
-                #update telemetry only once every 4 minutes to avoid tears in location
+                # Update telemetry only once every 4 minutes to avoid tears in location
                 self.update_telemetry()
                 print(self.telemetry)
-                
+
                 grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
                 self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
                 wspr_text = "{} {} {}".format(self.callsign, grid_square, 10)
                 print(wspr_text)
-            
-            #transmit U4B telemetry every other message
+
+            # Transmit U4B telemetry when it is our minute
             elif (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 10 == self.telemetry_minute):
-                #grab telem if at beginning so we know we have good data
+                # Grab telem if at beginning so we know we have good data
                 if self.telemetry['v_solar'] == 0 and self.telemetry['v_in'] == 0:
                     self.update_telemetry()
                     print(self.telemetry)
-                
+
                 subsquare = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[-2:]
 
-                #define GPS = healthy if it sees at least 8 satellites
+                # Gefine GPS = healthy if it sees at least 8 satellites
                 if self.telemetry['satellites'] >= 8:
                     gps_health = 1
                 else:
                     gps_health = 0
-                    
-                #encode which brightness sensor is reading higher as the normal U4B GPS status flag
-                #this will give us a very coarse reading on which direction the tracker is facing
+
+                # Encode which brightness sensor is reading higher as the normal U4B GPS status flag
+                # This will give us a very coarse reading on which direction the tracker is facing
                 if self.telemetry['l_front'] >= self.telemetry['l_back']:
                     board_orientation = 1
                 else:
                     board_orientation = 0
 
                 callsign = wspr.encode_subsquare_and_altitude_telemetry(self.telemetry_call, subsquare, int(self.telemetry['alt_m']))
+
+                # Add -1V offset to v_in, reportable range = 4 - 5.95 V (3 - 4.95 V + 1 V)
                 gs_and_power = wspr.encode_engineering_telemetry(self.telemetry['temp_c'],
-                                                                 self.telemetry['v_solar'] + 2, #get this into the range U4B expects
+                                                                 self.telemetry['v_in'] - 1, #get this into the range U4B expects
                                                                  self.telemetry['groundspeed_kn'],
                                                                  board_orientation,
                                                                  gps_health)

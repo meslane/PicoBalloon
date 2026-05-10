@@ -61,9 +61,7 @@ In the serial console, hit c + ENTER when prompted to enter calibration mode. Th
 
 ### WARMUP
 
-The Si5351 has ~10-20 Hz of measured drift across temperature from 
-startup to steady state. It is reccomended to let the oscillator 
-warm up for approximately 10 minutes to ensure transmission accuracy.
+The Si5351 has ~10-20 Hz of measured drift across temperature from startup to steady state. It is reccomended to let the oscillator warm up for approximately 10 minutes to ensure transmission accuracy.
 
 ## TESEO LIV3R GPS
 
@@ -97,10 +95,7 @@ The MS5607 is a barimetric pressure and temperature sensor. It is not required t
 - D2 = temperature reading
 
 ### Temperature Reading
-The temperature reading returned by the MS5607 is coupled to the
-temperature of the PCBA, which includes self-heating. As such,
-it will typically over-report relative to the temperature of its
-environment by approx. 10C - 20C.
+The temperature reading returned by the MS5607 is coupled to the temperature of the PCBA, which includes self-heating. As such, it will typically over-report relative to the temperature of its environment by approx. 10C - 20C.
 
 # Tracking
 
@@ -127,10 +122,25 @@ It is reccomended to reserve a slot on the above site and update your config.jso
 - `telemetry_call` = ID13
 - `telemetry_minute` = Minute
 
+### Telem Format
+The following telemetry (along with the above ID13) is encoded into the callsign, grid square, and power report for a telemetry message:
+
+| Telem       | Raw Range | Precision   | Decoded Range |
+| --------    | --------  | --------    | -------- |
+| Subsquare   | AA - XX   | 3 x 4 miles | N/A |
+| Altitude    | 0 - 1067  | 20 meters   | 0 - 21340 meters |
+| Temperature | 0 - 89    | 1 C         | -50 - 39 C |
+| Voltage     | 0 - 39    | 0.05 V      | 3 - 4.95 V |
+| Speed       | 0 - 41    | 2 knots     | 0 - 82 knots |
+| GPS Valid   | 0 - 1     | 1 bit       | Boolean |
+| GPS Health  | 0 - 1     | 1 bit       | Boolean |
+
+This telem was developed for the QRPLabs U4B, which doesn't exactly match this ballon in terms of hardware specs. We subtract 1 volt from `V-IN` when reported to get it into this range, so +1 V should be added back to the reported telemetry to get the true measured voltage.
+
+Similarly, instead of encoding GPS validity with the GPS valid flag, we instead encode which light sensor has a higher reading. If `l_front` > `l_back`, this flag will be 1, else 0.
+
 ### Tracking
 If you have a reserved channel, you can then track your flight on this website: https://wsprtv.com/
-
-## 
 
 # Assembly Guide
 
