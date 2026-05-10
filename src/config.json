@@ -1,5 +1,5 @@
 {
-	"version": "1.1",
+	"version": "2.1",
 	"callsign": "W6NXP",
 	"wspr_band": "20m",
 	"wspr_offsets": [40],
@@ -7,5 +7,5 @@
 	"telemetry_mode": "U4B",
 	"telemetry_call": "Q2",
 	"telemetry_minute": 8,
-	"log_to_file": true
+	"log_to_file": false
 }

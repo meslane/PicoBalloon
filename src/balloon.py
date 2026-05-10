@@ -87,6 +87,31 @@ class Balloon:
             V_SOLAR_ADC_IN = 26
             V_LSENS_BOT_ADC_IN = 28
             V_LSENS_TOP_ADC_IN = 29
+        elif self.version == "2.1":
+            CLKGEN_SDA = 20
+            CLKGEN_SCL = 21
+            CLKGEN_CHANNEL = 0
+            CLKGEN_OUTPUT = 0
+            
+            GPS_TX = 16
+            GPS_RX = 17
+            GPS_WAKE = 15
+            GPS_RESET = 14
+            GPS_PPS = 18
+            GPS_CHANNEL = 0
+            
+            ALTIMETER_MOSI = 3
+            ALTIMETER_MISO = 4
+            ALTIMETER_SCK = 2
+            ALTIMETER_CS = 5
+            ALTIMETER_CHANNEL = 0
+            
+            LED = 25
+            
+            V_IN_ADC_IN = 26
+            V_SOLAR_ADC_IN = 27
+            V_LSENS_BOT_ADC_IN = 28
+            V_LSENS_TOP_ADC_IN = 29
         else:
             raise NotImplementedError
 
@@ -109,7 +134,7 @@ class Balloon:
                 sck=machine.Pin(ALTIMETER_SCK),
                 mosi=machine.Pin(ALTIMETER_MOSI),
                 miso=machine.Pin(ALTIMETER_MISO)) 
-        elif self.version == "1.1":
+        elif self.version in ["1.1", "2.1"]:
             altimeter_spi = machine.SPI(baudrate=100000,
                 polarity=0,
                 phase=0,
@@ -129,7 +154,7 @@ class Balloon:
             clockgen_i2c = machine.SoftI2C(scl=machine.Pin(CLKGEN_SCL),
                                            sda=machine.Pin(CLKGEN_SDA),
                                            freq=100000, timeout=10000)
-        elif self.version == "1.1":
+        elif self.version in ["1.1", "2.1"]:
             clockgen_i2c = machine.I2C(id=CLKGEN_CHANNEL,
                                        scl=machine.Pin(CLKGEN_SCL),
                                        sda=machine.Pin(CLKGEN_SDA),
@@ -285,8 +310,10 @@ class Balloon:
         gprmc_dict = self.gps.get_GPRMC_data()
         gps_dict = self.gps.get_GPGGA_data()
         alt_dict = self.altimeter.get_pressure_and_temperature()
-        v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536)
-        v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536)
+        
+        # Update ADC readings, use x2 factor for voltage rails to account for voltage divider
+        v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536) * 2 
+        v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536) * 2
         l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536)
         l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536)
         
