@@ -26,6 +26,8 @@ class Balloon:
             self.band = config['wspr_band']
             self.offsets = config['wspr_offsets']
             self.tx_correction = config['tx_correction']
+            self.lsense_top_correction = config['lsense_top_correction']
+            self.lsense_bot_correction = config['lsense_bot_correction']
             self.telemetry_mode = config['telemetry_mode']
             self.telemetry_call = config['telemetry_call']
             self.log_to_file = config['log_to_file']
@@ -311,11 +313,13 @@ class Balloon:
         gps_dict = self.gps.get_GPGGA_data()
         alt_dict = self.altimeter.get_pressure_and_temperature()
         
-        # Update ADC readings, use x2 factor for voltage rails to account for voltage divider
+        # Update ADC readings
+        # Use x2 factor for voltage rails to account for voltage divider
+        # Use correction factor from config file for light sensors
         v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536) * 2 
         v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536) * 2
-        l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536)
-        l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536)
+        l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536) * float(self.lsense_top_correction)
+        l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536) * float(self.lsense_bot_correction)
         
         self.telemetry['lat_deg'] = gps_dict['lat_deg']
         self.telemetry['lon_deg'] = gps_dict['lon_deg']
