@@ -84,10 +84,6 @@ The LIV3R is the ballon's GPS module which is used to get position and altitude 
 The MS5607 is a barimetric pressure and temperature sensor. It is not required to function for the balloon to work in U4B telemetry mode, and the state machine will still proceed if it fails the built-in selftest.
 
 ### PIN MAPPINGS
-- SCK = GPIO4
-- MOSI = GPIO5
-- MISO = GPIO6
-- CS = GPIO7
 
 | GPIO Pin | MS5607    |
 | -------- | --------  |
@@ -105,6 +101,45 @@ The temperature reading returned by the MS5607 is coupled to the
 temperature of the PCBA, which includes self-heating. As such,
 it will typically over-report relative to the temperature of its
 environment by approx. 10C - 20C.
+
+# Tracking
+
+## WSPR Carrier Frequency
+WSPR TX frequencies are specified as an offset relative to a base frequency for each band:
+
+| Band     | Base Freq |
+| -------- | --------  |
+| 20m      | 14.097.000 MHz |
+| 40m      | 7.040.000 MHz  |
+
+Ex, when `offsets = [40]` in config.json, the balloon wil transmit at 14.097.040 MHz (subject to thermal drift over temp).
+
+## Telemetry System
+This balloon supports the use of the U4B telemetry system: https://qrp-labs.com/flights/s4#protocol
+
+The U4B telem system further divides callsigns into a series of channels: https://traquito.github.io/channelmap/
+
+To avoid collisions, channels are divided by the minute (mod 10) when they transmit telemetry, the first two digits of the "telemetry callsign", and the frequency they transmit at.
+
+It is reccomended to reserve a slot on the above site and update your config.json to the following:
+
+- `wspr_offsets` = \[freq - base frequency for band\]
+- `telemetry_call` = ID13
+- `telemetry_minute` = Minute
+
+### Tracking
+If you have a reserved channel, you can then track your flight on this website: https://wsprtv.com/
+
+## 
+
+# Assembly Guide
+
+## Through-Hole Capacitors
+C24 and C21 on V2.0 and beyond should be populated with supercapcitors to hold charge from the solar panels (in lieu of a battery).
+
+C24 and C21 are wired in series and are connected to the solar cell input through a protection diode. Ensure that the caps you use are rated for > 3.0 V DC bias.
+
+Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the board over USB on the ground. USB power is often very poorly filtered and the board's power rail may be too noisy to properly power the RP2040 when bulk caps are not present.
 
 # Change Logs
 ## v1.0 -> v1.1 Hardware Changelog
@@ -132,6 +167,3 @@ environment by approx. 10C - 20C.
 ## v2.0 -> v2.1 Hardware Changelog
 
 - Add voltage dividers to power rail ADC telemetry lines
-
-# Telemetry System
-This balloon supports the use of the U4B telemetry system: https://qrp-labs.com/flights/s4#protocol

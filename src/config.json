@@ -3,7 +3,7 @@
 	"callsign": "W6NXP",
 	"wspr_band": "20m",
 	"wspr_offsets": [40],
-	"tx_correction": -390,
+	"tx_correction": 0,
 	"lsense_top_correction": 1,
 	"lsense_bot_correction": 1.84,
 	"telemetry_mode": "U4B",
