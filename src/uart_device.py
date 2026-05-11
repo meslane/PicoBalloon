@@ -121,6 +121,8 @@ class LIV3(UART_Device):
         GPRMC_list = uart_str.split(',')
         GPRMC_dict = {}
         
+        data_valid = 1
+        
         try:
             lat_arcmin = float(GPRMC_list[3])
             lon_arcmin = float(GPRMC_list[5])
@@ -135,32 +137,44 @@ class LIV3(UART_Device):
                 lat_deg *= -1
             if GPRMC_list[6] == 'W':
                 lon_deg *= -1
-            
+        except (ValueError, IndexError):
+            lat_deg = 0
+            lon_deg = 0
+            data_valid = 0
+        
+        try:
             mag_var = float(GPRMC_list[10])
             
             if GPRMC_list[11] == 'E':
                 mag_var *= -1
+        except (ValueError, IndexError):
+            mag_var = 0
             
-            GPRMC_dict['t_utc'] = float(GPRMC_list[1])
-            GPRMC_dict['pos_status'] = GPRMC_list[2]
-            GPRMC_dict['lat_deg'] = lat_deg
-            GPRMC_dict['lon_deg'] = lon_deg
-            GPRMC_dict['groundspeed_kn'] = float(GPRMC_list[7])
-            GPRMC_dict['track_deg'] = float(GPRMC_list[8])
-            GPRMC_dict['date_utc'] = int(GPRMC_list[9])
-            GPRMC_dict['mag_var_deg'] = mag_var
-            GPRMC_dict['data_valid'] = 1
-        except (ValueError,  IndexError):
-            GPRMC_dict['t_utc'] = 0
-            GPRMC_dict['pos_status'] = 0
-            GPRMC_dict['lat_deg'] = 0
-            GPRMC_dict['lon_deg'] = lon_deg
-            GPRMC_dict['groundspeed_kn'] = 0
-            GPRMC_dict['track_deg'] = 0
-            GPRMC_dict['date_utc'] = 0
-            GPRMC_dict['mag_var_deg'] = 0
-            GPRMC_dict['data_valid'] = 0
+        try:
+            t_utc_gprmc = float(GPRMC_list[1])
+            pos_status_gprmc = GPRMC_list[2]
+            speed_gprmc = float(GPRMC_list[7])
+            track_gprmc = float(GPRMC_list[8])
+            date_gprmc = int(GPRMC_list[9])
+        except (ValueError, IndexError):
+            t_utc_gprmc = 0
+            pos_status_gprmc = 'N/A'
+            speed_gprmc = 0
+            track_gprmc = 0
+            date_gprmc = 0
+            
+            data_valid = 0
         
+        GPRMC_dict['t_utc'] = t_utc_gprmc
+        GPRMC_dict['pos_status'] = pos_status_gprmc
+        GPRMC_dict['lat_deg'] = lat_deg
+        GPRMC_dict['lon_deg'] = lon_deg
+        GPRMC_dict['groundspeed_kn'] = speed_gprmc
+        GPRMC_dict['track_deg'] = track_gprmc
+        GPRMC_dict['date_utc'] = date_gprmc
+        GPRMC_dict['mag_var_deg'] = mag_var
+        GPRMC_dict['data_valid'] = data_valid
+
         return GPRMC_dict
         
 class TEL0132(UART_Device):

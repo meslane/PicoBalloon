@@ -34,7 +34,7 @@ class Balloon:
             
             #mod 10 of the time in minutes, determines when telemetry is sent in accordance with https://traquito.github.io/channelmap/
             if config['telemetry_minute'] > 0:
-                self.telemetry_minute = config['telemetry_minute'] - 1
+                self.telemetry_minute = config['telemetry_minute'] #- 1
             else:
                 self.telemetry_minute = 9
         
@@ -384,8 +384,18 @@ class Balloon:
             t_now = gprmc_dict['t_utc']
             wspr_text = ""
             
+            # Check for both the exact telem minute and 1 minute before in the nominal case
+            min_now = int((int(t_now) // 100) % 10)
+            is_telem_minute = (min_now == self.telemetry_minute) or (min_now == self.telemetry_minute - 1)
+            
+            '''
+            print(t_now)
+            print(min_now)
+            print(self.telemetry_minute)
+            '''
+            
             # Do normal WSPR message
-            if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 10 != self.telemetry_minute):
+            if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and is_telem_minute == False):
                 # Update telemetry only once every 4 minutes to avoid tears in location
                 self.update_telemetry()
                 print(self.telemetry)
@@ -396,7 +406,7 @@ class Balloon:
                 print(wspr_text)
 
             # Transmit U4B telemetry when it is our minute
-            elif (self.telemetry_mode == "U4B" and (int(t_now) // 100) % 10 == self.telemetry_minute):
+            elif self.telemetry_mode == "U4B" and is_telem_minute == True:
                 # Grab telem if at beginning so we know we have good data
                 if self.telemetry['v_solar'] == 0 and self.telemetry['v_in'] == 0:
                     self.update_telemetry()
@@ -422,7 +432,7 @@ class Balloon:
                 # Add -1V offset to v_in, reportable range = 4 - 5.95 V (3 - 4.95 V + 1 V)
                 gs_and_power = wspr.encode_engineering_telemetry(self.telemetry['temp_c'],
                                                                  self.telemetry['v_in'] - 1, #get this into the range U4B expects
-                                                                 self.telemetry['groundspeed_kn'],
+                                                                 int(self.telemetry['groundspeed_kn']),
                                                                  board_orientation,
                                                                  gps_health)
                 
