@@ -37,7 +37,7 @@ def decode_u4b_telem(callsign: str, grid_square: str, power: int):
     eng_telem_int += (ord(grid_square[3]) - ord('0')) * 19
     eng_telem_int += power_int
     
-    print(eng_telem_int)
+    #print(eng_telem_int)
     
     #telem_int = gps_health + 2 * (gps_valid + 2 * (speed + 42 * (voltage + 40 * temperature)))
     #2, 4, 168, 6720
