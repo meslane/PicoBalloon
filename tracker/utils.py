@@ -1,3 +1,8 @@
+def GS2LL(gs):
+    lat = (ord(gs[1]) - 65) * 10 + (ord(gs[3]) - 48) + (ord(gs[5]) - 97) * (2.5/60) + (2.5/120) - 90
+    lon = (ord(gs[0]) - 65) * 20 + (ord(gs[2]) - 48) * 2 + (ord(gs[4]) - 97) * (5/60) + (5/120) - 180
+    
+    return (lat, lon)
 
 def decode_u4b_telem(callsign: str, grid_square: str, power: int):
     telemetry = {}

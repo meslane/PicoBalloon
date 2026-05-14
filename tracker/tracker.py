@@ -1,6 +1,7 @@
 import requests
 import json
 import pandas as pd
+from geopy import distance
 
 import utils
 
@@ -29,13 +30,16 @@ def query_standard_msg(call, d_start, band=14, num=10):
     
     return json.loads(r.text)
 
-def GS2LL(row):
+def GS2LL_tx(row):
     gs = str(row['grid'] + row['subsquare'])
+    return utils.GS2LL(gs)
     
-    lat = (ord(gs[1]) - 65) * 10 + (ord(gs[3]) - 48) + (ord(gs[5]) - 97) * (2.5/60) + (2.5/120) - 90
-    lon = (ord(gs[0]) - 65) * 20 + (ord(gs[2]) - 48) * 2 + (ord(gs[4]) - 97) * (5/60) + (5/120) - 180
+def GS2LL_rx(row):
+    gs = row['rx_loc']
+    return utils.GS2LL(gs)
     
-    return (lat, lon)
+def get_rx_distance(row):
+    return distance.geodesic(row['coords'], row['rx_coords']).km
 
 def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, band=14, num=10):
     '''
@@ -44,16 +48,19 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, 
     get full precision location data
     '''
     telem_df = pd.DataFrame()
-    wspr_tlm_data = query_telem(tlm_call, minute, tx_freq, d_start, num=num)['data']
+    wspr_tlm_data = query_telem(tlm_call, minute, tx_freq, d_start, 
+                                num=num, freq_tolerance=freq_tolerance)['data']
 
     for contact in wspr_tlm_data:
         tlm = utils.decode_u4b_telem(contact['tx_sign'], contact['tx_loc'], contact['power'])
         tlm['time'] = contact['time']
         tlm['frequency'] = contact['frequency']
         tlm['id'] = contact['id']
+        tlm['rx_loc'] = contact['rx_loc']
         
         telem_df = pd.concat([telem_df, pd.DataFrame([tlm])], ignore_index=True)
 
+    #print(telem_df[telem_df.duplicated(subset='time', keep=False)])
     telem_df.drop_duplicates(subset='time', keep='first', inplace=True)
 
     wspr_df = pd.DataFrame()
@@ -76,8 +83,22 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, 
     telem_df['grid'] = nearest_grid
     telem_df['call'] = nearest_call
 
-    telem_df['coords'] = telem_df.apply(GS2LL, axis=1)
+    telem_df['coords'] = telem_df.apply(GS2LL_tx, axis=1)
+    telem_df['rx_coords'] = telem_df.apply(GS2LL_rx, axis=1)
+    telem_df['rx_dist'] = telem_df.apply(get_rx_distance, axis=1)
 
     return telem_df
+    
+def filter_telem_outliers(telem_df, max_distance=4e3):
+    telem_df = telem_df[telem_df['rx_dist'] < max_distance]
+    
+    return telem_df
+    
+def print_telem(telem_df):
+    print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "rx_dist", "call"]))
 
-print(get_full_telem("W6NXP", "Q2", 8, 14097140, "2025-05-10", num=30))
+#print(query_standard_msg("W6NXP", "2025-05-10")['data'])
+raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-05-09", num=100, freq_tolerance=15)
+filtered_df = filter_telem_outliers(raw_df)
+
+print_telem(filtered_df)
