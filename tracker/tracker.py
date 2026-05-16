@@ -58,6 +58,10 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, 
         tlm['id'] = contact['id']
         tlm['rx_loc'] = contact['rx_loc']
         
+        tlm['tx_sign'] = contact['tx_sign']
+        tlm['tx_loc'] = contact['tx_loc']
+        tlm['power'] = contact['power']
+        
         telem_df = pd.concat([telem_df, pd.DataFrame([tlm])], ignore_index=True)
 
     #print(telem_df[telem_df.duplicated(subset='time', keep=False)])
@@ -86,6 +90,8 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, 
     telem_df['coords'] = telem_df.apply(GS2LL_tx, axis=1)
     telem_df['rx_coords'] = telem_df.apply(GS2LL_rx, axis=1)
     telem_df['rx_dist'] = telem_df.apply(get_rx_distance, axis=1)
+    
+    print(list(telem_df.columns))
 
     return telem_df
     
@@ -98,7 +104,7 @@ def print_telem(telem_df):
     print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "rx_dist", "call"]))
 
 #print(query_standard_msg("W6NXP", "2025-05-10")['data'])
-raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-05-09", num=100, freq_tolerance=15)
+raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-05-09", num=100, freq_tolerance=30)
 filtered_df = filter_telem_outliers(raw_df)
 
 print_telem(filtered_df)

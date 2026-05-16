@@ -177,3 +177,7 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 ## v2.0 -> v2.1 Hardware Changelog
 
 - Add voltage dividers to power rail ADC telemetry lines
+
+# Bug List
+
+- Messages pulled from the WSPR database sometimes have speed values that don't match what is reported on the balloon and the WSPR message reported in this case doesn't match what the balloon says it transmitted. Need to find out why.
