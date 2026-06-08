@@ -97,6 +97,27 @@ The MS5607 is a barimetric pressure and temperature sensor. It is not required t
 ### Temperature Reading
 The temperature reading returned by the MS5607 is coupled to the temperature of the PCBA, which includes self-heating. As such, it will typically over-report relative to the temperature of its environment by approx. 10C - 20C.
 
+## Power Specs
+
+### Current Draw
+
+Test run at 5.2 V / 25 C with 330 Ohm current limiting resistors. About 10 mA additional draw is observed when the PPS LED is on in this condition. For flight it is reccomended to populated the LED current limiting resistors with values of > 1 kOhms.
+
+| State | Current Draw (mA) | Power Draw (mW) |
+| -------- | --------  | -------- |
+| All devices on + state machine stopped | 50 | 260 |
+| All devices on + State machine active (no tone) | 60 | 312 |
+| All devices on + Playing Tone | 70  | 364 |
+
+### Solar Panels
+
+For V2.1, I use these flexible solar panels from powerfilm: https://www.mouser.com/ProductDetail/730-MPT4.8-75
+
+Note that their open circuit voltage of 7.4V is higher than the rated max input voltage of the BC on V2.0 and V2.1. On V2.2 this will be fixed by switching to a converter with a higher input voltage rating.
+
+### Power Sequencing
+Testing on V2.1 revealed that the RP2040 will get stuck in a latched state if it is powered off of solar arrays without tying the RUN pin to GND until the 3.3V rail is at full scale. On V2.2 this is fixed by directly connecting the RUN pin to the open drain PGOOD signal of the buck converter. This will automatically reset the RP2040 if the output power rail droops too low. 
+
 # Tracking
 
 ## WSPR Carrier Frequency
@@ -149,7 +170,7 @@ C24 and C21 on V2.0 and beyond should be populated with supercapcitors to hold c
 
 C24 and C21 are wired in series and are connected to the solar cell input through a protection diode. Ensure that the caps you use are rated for > 3.0 V DC bias.
 
-Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the board over USB on the ground. USB power is often very poorly filtered and the board's power rail may be too noisy to properly power the RP2040 when bulk caps are not present.
+Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the board over USB on the ground. USB power is often very poorly filtered and the board's power rail may be too noisy to properly power the RP2040 when bulk caps are not present. On V2.2 and beyond this is fixed by adding an additional surface mount 22 uF cap to the input rail.
 
 # Change Logs
 ## v1.0 -> v1.1 Hardware Changelog
@@ -177,6 +198,15 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 ## v2.0 -> v2.1 Hardware Changelog
 
 - Add voltage dividers to power rail ADC telemetry lines
+
+## v2.1 -> v2.2 Hwardware changelog
+
+- Switch from LM3671 to TPS629206 to support 17V max input voltage from solar panels
+	- Connect RP2040 RUN pin to PGOOD on the TPS629206 to prevent brownouts due to low input voltage
+- Update voltage divider for V_SOLAR to use 47k resistor for max V_SOLAR of 18.8V
+- Add 22uF SMT capacitor to buck converter input for power filtering when through hole caps are unpopulated
+- Update LED current limiting resistor values to 1k Ohms
+- Delete soldermask opening on inverted F antenna
 
 # Bug List
 

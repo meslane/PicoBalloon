@@ -31,8 +31,8 @@ def decode_u4b_telem(callsign: str, grid_square: str, power: int):
     #decode grid square and power
     power_lut = [0,3,7,10,13,17,
                  20,23,27,30,33,37,
-                 40,43,47,50,53,37,60]
-                 
+                 40,43,47,50,53,57,60]
+
     power_int = power_lut.index(power)
     
     eng_telem_int = 0

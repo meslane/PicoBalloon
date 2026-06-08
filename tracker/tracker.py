@@ -5,7 +5,7 @@ from geopy import distance
 
 import utils
 
-def query_telem(call, minute, tx_freq, d_start, freq_tolerance=20, band=14, num=10):
+def query_telem(call, minute, tx_freq, d_start, d_end, freq_tolerance=20, band=14, num=10):
     '''
     Query telem callsigns matching the specified pattern
     '''
@@ -13,18 +13,18 @@ def query_telem(call, minute, tx_freq, d_start, freq_tolerance=20, band=14, num=
     call_regex = f"'^{call[0]}.{call[1]}.*'"
     time_regex = rf"':(?:\d){minute}:'"
 
-    query = f"SELECT * FROM wspr.rx WHERE time > '{d_start}' AND band == {band} AND match(tx_sign, {call_regex}) == 1 AND match(toString(time), {time_regex}) == 1 AND ABS(frequency - {tx_freq}) < {freq_tolerance} ORDER BY id DESC LIMIT {num} FORMAT JSON;"
+    query = f"SELECT * FROM wspr.rx WHERE time > '{d_start}' AND time <= '{d_end}' AND band == {band} AND match(tx_sign, {call_regex}) == 1 AND match(toString(time), {time_regex}) == 1 AND ABS(frequency - {tx_freq}) < {freq_tolerance} ORDER BY id DESC LIMIT {num} FORMAT JSON;"
 
     r = requests.get(f"http://db1.wspr.live/?query={query}")
     
     return json.loads(r.text)
     
-def query_standard_msg(call, d_start, band=14, num=10):
+def query_standard_msg(call, d_start, d_end, band=14, num=10):
     '''
     Query standard WSPR callsigns matching the specified pattern
     '''
     
-    query = f"SELECT * FROM wspr.rx WHERE time > '{d_start}' AND band == {band} AND tx_sign == '{call}' ORDER BY id DESC LIMIT {num} FORMAT JSON;"
+    query = f"SELECT * FROM wspr.rx WHERE time > '{d_start}' AND time <= '{d_end}' AND band == {band} AND tx_sign == '{call}' ORDER BY id DESC LIMIT {num} FORMAT JSON;"
     
     r = requests.get(f"http://db1.wspr.live/?query={query}")
     
@@ -41,14 +41,14 @@ def GS2LL_rx(row):
 def get_rx_distance(row):
     return distance.geodesic(row['coords'], row['rx_coords']).km
 
-def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, band=14, num=10):
+def get_full_telem(call, tlm_call, minute, tx_freq, d_start, d_end, freq_tolerance=20, band=14, num=10):
     '''
     Return a dataframe containing full telemetry.
     This combines special telem messages with generic WSPR callsigns to
     get full precision location data
     '''
     telem_df = pd.DataFrame()
-    wspr_tlm_data = query_telem(tlm_call, minute, tx_freq, d_start, 
+    wspr_tlm_data = query_telem(tlm_call, minute, tx_freq, d_start, d_end,
                                 num=num, freq_tolerance=freq_tolerance)['data']
 
     for contact in wspr_tlm_data:
@@ -68,7 +68,7 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, freq_tolerance=20, 
     telem_df.drop_duplicates(subset='time', keep='first', inplace=True)
 
     wspr_df = pd.DataFrame()
-    wspr_data = query_standard_msg(call, d_start, num=num)['data']
+    wspr_data = query_standard_msg(call, d_start, d_end, num=num)['data']
 
     for contact in wspr_data:
         wspr_df = pd.concat([wspr_df, pd.DataFrame([contact])], ignore_index=True)
@@ -103,8 +103,12 @@ def filter_telem_outliers(telem_df, max_distance=4e3):
 def print_telem(telem_df):
     print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "rx_dist", "call"]))
 
-#print(query_standard_msg("W6NXP", "2025-05-10")['data'])
-raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-05-09", num=100, freq_tolerance=30)
+#print(query_standard_msg("W6NXP", "2025-05-10", "2026-05-16")['data'])
+
+
+raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-05-10", "2026-05-12", num=50, freq_tolerance=20)
 filtered_df = filter_telem_outliers(raw_df)
 
+#print_telem(raw_df)
 print_telem(filtered_df)
+
