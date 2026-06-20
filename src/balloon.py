@@ -26,6 +26,7 @@ class Balloon:
             self.band = config['wspr_band']
             self.offsets = config['wspr_offsets']
             self.tx_correction = config['tx_correction']
+            self.telemeter_lsense = config['telemeter_lsense']
             self.lsense_top_correction = config['lsense_top_correction']
             self.lsense_bot_correction = config['lsense_bot_correction']
             self.telemetry_mode = config['telemetry_mode']
@@ -64,32 +65,7 @@ class Balloon:
             
             V_IN_ADC_IN = 26
             V_SOLAR_ADC_IN = 27
-        elif self.version == "1.1":
-            CLKGEN_SDA = 20
-            CLKGEN_SCL = 21
-            CLKGEN_CHANNEL = 0
-            CLKGEN_OUTPUT = 0
-            
-            GPS_TX = 16
-            GPS_RX = 17
-            GPS_WAKE = 15
-            GPS_RESET = 14
-            GPS_PPS = 18
-            GPS_CHANNEL = 0
-            
-            ALTIMETER_MOSI = 3
-            ALTIMETER_MISO = 4
-            ALTIMETER_SCK = 2
-            ALTIMETER_CS = 5
-            ALTIMETER_CHANNEL = 0
-            
-            LED = 25
-            
-            V_IN_ADC_IN = 27
-            V_SOLAR_ADC_IN = 26
-            V_LSENS_BOT_ADC_IN = 28
-            V_LSENS_TOP_ADC_IN = 29
-        elif self.version == "2.1":
+        elif self.version in ["1.1", "2.1", "2.2"]:
             CLKGEN_SDA = 20
             CLKGEN_SCL = 21
             CLKGEN_CHANNEL = 0
@@ -136,7 +112,7 @@ class Balloon:
                 sck=machine.Pin(ALTIMETER_SCK),
                 mosi=machine.Pin(ALTIMETER_MOSI),
                 miso=machine.Pin(ALTIMETER_MISO)) 
-        elif self.version in ["1.1", "2.1"]:
+        elif self.version in ["1.1", "2.1", "2.2"]:
             altimeter_spi = machine.SPI(baudrate=100000,
                 polarity=0,
                 phase=0,
@@ -156,7 +132,7 @@ class Balloon:
             clockgen_i2c = machine.SoftI2C(scl=machine.Pin(CLKGEN_SCL),
                                            sda=machine.Pin(CLKGEN_SDA),
                                            freq=100000, timeout=10000)
-        elif self.version in ["1.1", "2.1"]:
+        elif self.version in ["1.1", "2.1", "2.2"]:
             clockgen_i2c = machine.I2C(id=CLKGEN_CHANNEL,
                                        scl=machine.Pin(CLKGEN_SCL),
                                        sda=machine.Pin(CLKGEN_SDA),
@@ -313,11 +289,21 @@ class Balloon:
         gps_dict = self.gps.get_GPGGA_data()
         alt_dict = self.altimeter.get_pressure_and_temperature()
         
-        # Update ADC readings
-        # Use x2 factor for voltage rails to account for voltage divider
+        # Update ADC voltage rail readings
+        if self.version in ["1.0", "1.1"]:
+            # v1 balloons use raw ADC readings
+            adc_scale = 1.0
+        elif self.version == "2.1":
+            # v2.1 uses x2 factor for voltage rails to account for voltage divider
+            adc_scale = 2.0
+        elif self.version == "2.2":
+            # v2.2 uses 10k and 47k voltage divider (1.0/0.175438596 = 5.7)
+            adc_scale = 5.7
+
+        v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536) * adc_scale
+        v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536) * adc_scale
+
         # Use correction factor from config file for light sensors
-        v_in = adc_avg(self.v_in_adc, 10) * (3.3/65536) * 2 
-        v_solar = adc_avg(self.v_solar_adc, 10) * (3.3/65536) * 2
         l_front = adc_avg(self.l_front_adc, 10) * (3.3/65536) * float(self.lsense_top_correction)
         l_back = adc_avg(self.l_back_adc, 10) * (3.3/65536) * float(self.lsense_bot_correction)
         
@@ -420,12 +406,16 @@ class Balloon:
                 else:
                     gps_health = 0
 
-                # Encode which brightness sensor is reading higher as the normal U4B GPS status flag
-                # This will give us a very coarse reading on which direction the tracker is facing
-                if self.telemetry['l_front'] >= self.telemetry['l_back']:
-                    board_orientation = 1
+                if self.telemeter_lsense == True:
+                    # Encode which brightness sensor is reading higher as the normal U4B GPS status flag
+                    # This will give us a very coarse reading on which direction the tracker is facing
+                    if self.telemetry['l_front'] >= self.telemetry['l_back']:
+                        gps_valid = 1
+                    else:
+                        gps_valid = 0
                 else:
-                    board_orientation = 0
+                    # For now the state machine enforces that GPS must be valid for us to transmit
+                    gps_valid = 1
 
                 callsign = wspr.encode_subsquare_and_altitude_telemetry(self.telemetry_call, subsquare, int(self.telemetry['alt_m']))
 
@@ -433,7 +423,7 @@ class Balloon:
                 gs_and_power = wspr.encode_engineering_telemetry(self.telemetry['temp_c'],
                                                                  self.telemetry['v_in'] - 1, #get this into the range U4B expects
                                                                  int(self.telemetry['groundspeed_kn']),
-                                                                 board_orientation,
+                                                                 gps_valid,
                                                                  gps_health)
                 
                 self.message = wspr.generate_wspr_message(callsign, gs_and_power[0], gs_and_power[1])
