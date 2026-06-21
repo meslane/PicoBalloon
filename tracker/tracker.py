@@ -91,7 +91,7 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, d_end, freq_toleran
     telem_df['rx_coords'] = telem_df.apply(GS2LL_rx, axis=1)
     telem_df['rx_dist'] = telem_df.apply(get_rx_distance, axis=1)
     
-    print(list(telem_df.columns))
+    #print(list(telem_df.columns))
 
     return telem_df
     
@@ -103,10 +103,11 @@ def filter_telem_outliers(telem_df, max_distance=4e3):
 def print_telem(telem_df):
     print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "rx_dist", "call"]))
 
-#print(query_standard_msg("W6NXP", "2025-05-10", "2026-05-16")['data'])
+#Note that the last day specified in your query should be one day AFTER the last day you're trying to query
 
+#print(query_standard_msg("W6NXP", "2026-06-18", "2026-06-22")['data'])
 
-raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-05-10", "2026-05-12", num=50, freq_tolerance=20)
+raw_df = get_full_telem("W6NXP", "Q2", 8, 14097170, "2026-06-19", "2026-06-22", num=40, freq_tolerance=50)
 filtered_df = filter_telem_outliers(raw_df)
 
 #print_telem(raw_df)

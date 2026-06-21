@@ -199,7 +199,7 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 
 - Add voltage dividers to power rail ADC telemetry lines
 
-## v2.1 -> v2.2 Hwardware changelog
+## v2.1 -> v2.2 Hwardware Changelog
 
 - Switch from LM3671 to TPS629206 to support 17V max input voltage from solar panels
 	- Connect RP2040 RUN pin to PGOOD on the TPS629206 to prevent brownouts due to low input voltage
@@ -207,6 +207,10 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 - Add 22uF SMT capacitor to buck converter input for power filtering when through hole caps are unpopulated
 - Update LED current limiting resistor values to 1k Ohms
 - Delete soldermask opening on inverted F antenna
+
+## v2.2 -> v2.3 Hardware Changelog
+
+- Add NJG1156PCD GPS FEM to signal chain to improve acquisition time
 
 # Bug List
 

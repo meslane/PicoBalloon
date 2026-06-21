@@ -198,7 +198,15 @@ class Balloon:
         self.gps_pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
 
     def pps_interrupt(self, *args):
-        self.led.toggle()
+        # Set LED patterns to inidicate GPS state
+        if self.state in ["init", "wait_for_time"]: # 0 satellites
+            led_pattern = [1,1,0,0]
+        elif self.state in ["wait_for_fix"]: # >= 1 sat but no fix
+            led_pattern = [1,0,0,0]
+        else: # GPS fixed
+            led_pattern = [1,0,1,0]
+            
+        self.led.value(led_pattern[self.pps_count % 4])
         self.pps_count += 1
     
     def selftest(self):
