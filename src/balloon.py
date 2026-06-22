@@ -384,8 +384,11 @@ class Balloon:
                     power_lut = [0,3,7,10,13,17,
                                  20,23,27,30,33,37,
                                  40,43,47,50,53,57,60]
-                    # Scale to 19000m with 1km altitude resolution
-                    pwr_idx = int(round(self.telemetry['alt_m'] * len(power_lut) / 19000, 0))
+                    # Scale to 18000m with 1km altitude resolution
+                    pwr_idx = int(round(self.telemetry['alt_m'] * len(power_lut) / 18000, 0))
+                    if pwr_idx > len(power_lut) - 1:
+                        pwr_idx = len(power_lut) -1
+
                     wspr_pwr = power_lut[pwr_idx]
                 else:
                     wspr_pwr = 10 # 10 dBm TX power out of clkgen
