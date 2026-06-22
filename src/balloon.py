@@ -31,6 +31,7 @@ class Balloon:
             self.lsense_bot_correction = config['lsense_bot_correction']
             self.telemetry_mode = config['telemetry_mode']
             self.telemetry_call = config['telemetry_call']
+            self.telem_alt_as_pwr = config['telemeter_altitude_as_power']
             self.log_to_file = config['log_to_file']
             
             #mod 10 of the time in minutes, determines when telemetry is sent in accordance with https://traquito.github.io/channelmap/
@@ -372,21 +373,26 @@ class Balloon:
             min_now = int((int(t_now) // 100) % 10)
             is_telem_minute = (min_now == self.telemetry_minute) or (min_now == self.telemetry_minute - 1)
             
-            '''
-            print(t_now)
-            print(min_now)
-            print(self.telemetry_minute)
-            '''
-            
             # Do normal WSPR message
             if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and is_telem_minute == False):
                 # Update telemetry only once every 4 minutes to avoid tears in location
                 self.update_telemetry()
                 print(self.telemetry)
 
+                # If specified in config, telemeter balloon altitude using the normal WSPR power field
+                if self.telem_alt_as_pwr == True:
+                    power_lut = [0,3,7,10,13,17,
+                                 20,23,27,30,33,37,
+                                 40,43,47,50,53,57,60]
+                    # Scale to 19000m with 1km altitude resolution
+                    pwr_idx = int(round(self.telemetry['alt_m'] * len(power_lut) / 19000, 0))
+                    wspr_pwr = power_lut[pwr_idx]
+                else:
+                    wspr_pwr = 10 # 10 dBm TX power out of clkgen
+
                 grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
-                self.message = wspr.generate_wspr_message(self.callsign, grid_square, 10)
-                wspr_text = "{} {} {}".format(self.callsign, grid_square, 10)
+                self.message = wspr.generate_wspr_message(self.callsign, grid_square, wspr_pwr)
+                wspr_text = "{} {} {}".format(self.callsign, grid_square, wspr_pwr)
                 print(wspr_text)
 
             # Transmit U4B telemetry when it is our minute

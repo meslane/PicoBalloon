@@ -11,5 +11,6 @@
 	"telemetry_call": "Q2",
 	"telemetry_minute": 8,
 	"telemetry_channel": 450,
+	"telemeter_altitude_as_power": true,
 	"log_to_file": true
 }
