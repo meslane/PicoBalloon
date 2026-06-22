@@ -317,6 +317,7 @@ class Balloon:
         
         self.telemetry['lat_deg'] = gps_dict['lat_deg']
         self.telemetry['lon_deg'] = gps_dict['lon_deg']
+        self.telemetry['gps_valid'] = (int(gps_dict['lat_deg']) != 0 or int(gps_dict['lon_deg']) != 0)
         self.telemetry['t_utc'] = gps_dict['t_utc']
         self.telemetry['alt_m'] = gps_dict['alt_m']
         self.telemetry['satellites'] = gps_dict['satellites']
@@ -347,7 +348,7 @@ class Balloon:
             self.pps_count = 0
             #self.watchdog = machine.WDT(timeout=2000) #2s watchdog expiration
             self.state = "wait_for_time"
-            
+
         elif self.state == "wait_for_time":
             gps_dict = self.gps.get_GPGGA_data()
             
@@ -356,21 +357,10 @@ class Balloon:
             
             if gps_dict['t_utc'] > (self.pps_count + 10) and gps_dict['satellites'] > 0:
                 print()
-                self.state = "wait_for_fix"
-        
-        elif self.state == "wait_for_fix":
-            gps_dict = self.gps.get_GPGGA_data()
-            
-            print("Satellites: {} {}       ".format(gps_dict['satellites'],
-                                             self.loadchars[self.char_index]),
-                                             end='\r')
-            self.char_index = self.char_index + 1 if self.char_index < 3 else 0
-            
-            if int(gps_dict['lat_deg']) != 0 or int(gps_dict['lon_deg']) != 0:
-                print()
+                #self.state = "wait_for_fix"
                 self.configure_clockgen()
                 self.state = "collect_telemetry"
-         
+
         elif self.state == "collect_telemetry":
             gprmc_dict = self.gps.get_GPRMC_data()
             
@@ -422,8 +412,7 @@ class Balloon:
                     else:
                         gps_valid = 0
                 else:
-                    # For now the state machine enforces that GPS must be valid for us to transmit
-                    gps_valid = 1
+                    gps_valid = int(self.telemetry['gps_valid'])
 
                 callsign = wspr.encode_subsquare_and_altitude_telemetry(self.telemetry_call, subsquare, int(self.telemetry['alt_m']))
 
@@ -451,8 +440,8 @@ class Balloon:
             gps_dict = self.gps.get_GPGGA_data()
             
             #if we lose lock, go back
-            if int(gps_dict['lat_deg']) == 0 and int(gps_dict['lon_deg']) == 0:
-                self.state = "wait_for_fix"
+            if self.telemetry['satellites'] == 0:
+                self.state = "wait_for_time"
             else:
                 t_gps = int(gps_dict['t_utc'])
                 if ((t_gps // 100) % 2 == 1) and (t_gps % 100 == 59):
