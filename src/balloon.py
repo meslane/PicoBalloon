@@ -217,7 +217,7 @@ class Balloon:
                    "LIV3R": "FAIL",
                    "MS5607": "FAIL"}
         
-        #test clockgen
+        # Test clockgen
         try:
             self.clockgen.i2c_write(0x19, 0x77)
             if self.clockgen.i2c_read(0x19) == 0x77:
@@ -226,19 +226,27 @@ class Balloon:
         except OSError:
             pass
         
-        #test GPS
+        # Test GPS
         status['LIV3R'] = "PASS"
-        #await data over UART
+        # Await data over UART
         i = 0
         while self.gps.uart.any() == 0:
             i += 1
             time.sleep(0.01)
             
             if i > 100:
-                status['LIV3R'] = "FAIL" #fail if we time out
+                status['LIV3R'] = "FAIL" # fail if we time out
                 break
+
+        # Test that the PPS line is connected
+        status['PPS'] = "PASS"
+
+        start_pps = self.pps_count
+        time.sleep(1.1)
+        if self.pps_count == start_pps:
+            status['PPS'] = "FAIL" # fail if PPS count does not increase after > 1s
         
-        #test Altimeter
+        # Test Altimeter
         try:
             prom = int.from_bytes(self.altimeter.read_prom(0), "big")
             if prom != 0x0000 and prom != 0xFFFF:
@@ -247,7 +255,7 @@ class Balloon:
             pass
         
         for key in status.keys():
-            print("{} - {}".format(key, status[key]))
+            print("{:<6} - {}".format(key, status[key]))
         
         return status
     

@@ -11,7 +11,7 @@ def main():
     
     mode = "selftest"
     
-    if hw_status['Si5351'] == "FAIL" or hw_status['LIV3R'] == "FAIL":
+    if hw_status['Si5351'] == "FAIL" or hw_status['LIV3R'] == "FAIL" or hw_status['PPS'] == "FAIL":
         print("Self-test failed on critical component! Holding for 10s before resetting...")
         mode = "reset_sleep"
     elif hw_status['MS5607'] == "FAIL":
