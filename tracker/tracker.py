@@ -96,7 +96,7 @@ def get_full_telem(call, tlm_call, minute, tx_freq, d_start, d_end, freq_toleran
     return telem_df
     
 def filter_telem_outliers(telem_df, max_distance=4e3):
-    telem_df = telem_df[telem_df['rx_dist'] < max_distance]
+    telem_df = telem_df[(telem_df['rx_dist'] < max_distance) | (telem_df['grid'] == 'JJ00')]
     
     return telem_df
     
@@ -107,7 +107,7 @@ def print_telem(telem_df):
 
 #print(query_standard_msg("W6NXP", "2026-06-18", "2026-06-22")['data'])
 
-raw_df = get_full_telem("W6NXP", "Q2", 8, 14097170, "2026-06-19", "2026-06-22", num=40, freq_tolerance=50)
+raw_df = get_full_telem("W6NXP", "Q2", 8, 14097170, "2026-06-21", "2026-06-30", num=50, freq_tolerance=50)
 filtered_df = filter_telem_outliers(raw_df)
 
 #print_telem(raw_df)
