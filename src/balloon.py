@@ -214,8 +214,9 @@ class Balloon:
         print("Running Built-In Hardware Self-Test...")
         
         status = {"Si5351": "FAIL",
-                   "LIV3R": "FAIL",
-                   "MS5607": "FAIL"}
+                  "LIV3R":  "FAIL",
+                  "PPS":    "FAIL",
+                  "MS5607": "FAIL"}
         
         # Test clockgen
         try:
