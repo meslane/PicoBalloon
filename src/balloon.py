@@ -195,6 +195,10 @@ class Balloon:
         self.loadchars = ['|', '/', '-', '\\']
         self.char_index = 0
         
+        #set the system clock to 48 MHz to save power
+        print("Setting system clock to 48 MHz")
+        machine.freq(48_000_000)
+
         #start GPS interrupt only after everything else succeeds
         self.gps_pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
 
@@ -484,6 +488,7 @@ class Balloon:
             print("{} - {}".format(self.state, self.pps_count))
             
         #self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
+        #time.sleep(10e-3) #sleep for 10ms at the end of each loop to save power
             
     def print_telemetry(self):
         self.update_telemetry()

@@ -101,6 +101,8 @@ The temperature reading returned by the MS5607 is coupled to the temperature of 
 
 ### Current Draw
 
+#### V2.1
+
 Test run at 5.2 V / 25 C with 330 Ohm current limiting resistors. About 10 mA additional draw is observed when the PPS LED is on in this condition. For flight it is reccomended to populated the LED current limiting resistors with values of > 1 kOhms.
 
 | State | Current Draw (mA) | Power Draw (mW) |
@@ -108,6 +110,16 @@ Test run at 5.2 V / 25 C with 330 Ohm current limiting resistors. About 10 mA ad
 | All devices on + state machine stopped | 50 | 260 |
 | All devices on + State machine active (no tone) | 60 | 312 |
 | All devices on + Playing Tone | 70  | 364 |
+
+#### V2.3
+
+Test run at 5.2 V / 30C with 1k LED current limiting resistors. Set system clock to 48 MHz.
+
+| State | Current Draw (mA) | Power Draw (mW) |
+| -------- | --------  | -------- |
+| All devices on + state machine stopped | 50 | 260 |
+| All devices on + State machine active (no tone) | 50 | 260 |
+| All devices on + Playing Tone | 60 | 312 |
 
 ### Solar Panels
 
