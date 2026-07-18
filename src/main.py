@@ -12,7 +12,7 @@ def main():
     mode = "selftest"
     
     if hw_status['Si5351'] == "FAIL" or hw_status['LIV3R'] == "FAIL" or hw_status['PPS'] == "FAIL":
-        print("Self-test failed on critical component! Holding for 10s before resetting...")
+        print("Self-test failed on critical component! Holding for 5s before resetting...")
         mode = "reset_sleep"
     elif hw_status['MS5607'] == "FAIL":
         print("Self-test failed on non-critical component. Starting state machine...")
@@ -44,7 +44,7 @@ def main():
                     mode = "state_machine"
                     break
                 
-            if (time.time() - t_start) >= 10: #nominally 10
+            if (time.time() - t_start) >= 10:
                 mode = "state_machine"
                 break
 

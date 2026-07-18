@@ -34,7 +34,7 @@ class Balloon:
             self.telem_alt_as_pwr = config['telemeter_altitude_as_power']
             self.log_to_file = config['log_to_file']
             
-            #mod 10 of the time in minutes, determines when telemetry is sent in accordance with https://traquito.github.io/channelmap/
+            # mod 10 of the time in minutes, determines when telemetry is sent in accordance with https://traquito.github.io/channelmap/
             if config['telemetry_minute'] > 0:
                 self.telemetry_minute = config['telemetry_minute'] #- 1
             else:
@@ -43,7 +43,7 @@ class Balloon:
         with open(geofence_file) as f:
             self.geofence = json.load(f)
         
-        #GPIO init
+        # GPIO init
         if self.version == "1.0":
             CLKGEN_SCL = 22
             CLKGEN_SDA = 21
@@ -94,7 +94,7 @@ class Balloon:
         else:
             raise NotImplementedError
 
-        #GPS Init
+        # GPS Init
         gps_uart = machine.UART(GPS_CHANNEL, baudrate=9600,
                         tx=machine.Pin(GPS_TX), rx=machine.Pin(GPS_RX), timeout=100)
         gps_wake = machine.Pin(GPS_WAKE, machine.Pin.OUT)
@@ -103,7 +103,7 @@ class Balloon:
         self.gps = uart_device.LIV3(gps_uart, wake=gps_wake, reset=gps_reset,
                                pps=self.gps_pps)
         
-        #Altimeter Init
+        # Altimeter Init
         if self.version == "1.0":
             altimeter_spi = machine.SoftSPI(baudrate=100000,
                 polarity=0,
@@ -128,7 +128,7 @@ class Balloon:
         
         self.altimeter = spi_device.MS5607(altimeter_spi, machine.Pin(ALTIMETER_CS, machine.Pin.OUT))
         
-        #WSPR Clock Generator Init
+        # WSPR Clock Generator Init
         if self.version == "1.0":
             clockgen_i2c = machine.SoftI2C(scl=machine.Pin(CLKGEN_SCL),
                                            sda=machine.Pin(CLKGEN_SDA),
@@ -143,40 +143,40 @@ class Balloon:
         
         self.clockgen = i2c_device.SI5351(clockgen_i2c)
         
-        #ADC Init
+        # ADC Init
         self.v_in_adc = machine.ADC(V_IN_ADC_IN)
         self.v_solar_adc = machine.ADC(V_SOLAR_ADC_IN)
         self.l_front_adc = machine.ADC(V_LSENS_TOP_ADC_IN)
         self.l_back_adc = machine.ADC(V_LSENS_BOT_ADC_IN)
         
-        #LED
+        # LED
         self.led = machine.Pin(LED, machine.Pin.OUT)
         
-        #PPS
+        # PPS
         self.pps_count = 0
         self.last_pps = 0
         
-        #WSPR message
+        # WSPR message
         self.tone_index = 0
         self.message = []
         
         self.offset_index = 0
         self.output = CLKGEN_OUTPUT
         
-        #WSPR constants
+        # WSPR constants
         self.tone_period = 683 #ms
         self.tone_spacing = 1.465 #Hz
         self.message_length = 162 #tones
         
-        #Transmit timer
+        # Transmit timer
         self.timer = machine.Timer(period=self.tone_period, mode = machine.Timer.PERIODIC,
                    callback=None)
         self.timer.deinit()
         
-        #Set state
+        # Set state
         self.state = "init"
         
-        #init telemetry dict
+        # Init telemetry dict
         self.telemetry = {"lat_deg": 0.0,
                           "lon_deg": 0.0,
                           "alt_m": 0.0,
@@ -188,18 +188,19 @@ class Balloon:
                           "l_front": 0.0,
                           "l_back": 0.0}
         
-        #don't init watchdog to start
+        # Don't init watchdog to start
         self.watchdog = None
 
-        #fun!
+        # Fun!
         self.loadchars = ['|', '/', '-', '\\']
         self.char_index = 0
         
-        #set the system clock to 48 MHz to save power
-        print("Setting system clock to 48 MHz")
-        machine.freq(125_000_000) #nominally 48, CHANGE BACK
+        # Set the system clock (NOTE: must be >= 48 MHz for USB to work!)
+        self.clk_mhz = 48
+        print(f"Setting system clock to {self.clk_mhz} MHz")
+        machine.freq(int(self.clk_mhz * 1e6))
 
-        #start GPS interrupt only after everything else succeeds
+        # Start GPS interrupt only after everything else succeeds
         self.gps_pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
 
     def pps_interrupt(self, *args):
@@ -246,11 +247,11 @@ class Balloon:
         # Test that the PPS line is connected
         status['PPS'] = "PASS"
 
-        start_pps = self.pps_count
-        time.sleep(1.5)
-        if self.pps_count == start_pps:
+        time.sleep_ms(1000) # give time for the system to start + emit PPS when running headless
+        self.last_pps = self.pps_count
+        time.sleep_ms(1100)
+        if self.pps_count == self.last_pps:
             status['PPS'] = "FAIL" # fail if PPS count does not increase after > 1s
-        print(start_pps, self.pps_count)
         
         # Test Altimeter
         try:
@@ -361,7 +362,7 @@ class Balloon:
         
         if self.state == "init":
             self.pps_count = 0
-            self.watchdog = machine.WDT(timeout=8000) #8s watchdog expiration
+            #self.watchdog = machine.WDT(timeout=8000) #8s watchdog expiration
             self.state = "wait_for_time"
 
         elif self.state == "wait_for_time":
@@ -488,7 +489,7 @@ class Balloon:
         if self.state != start_state:
             print("{} - {}".format(self.state, self.pps_count))
             
-        self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
+        #self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
         #time.sleep(10e-3) #sleep for 10ms at the end of each loop to save power
             
     def print_telemetry(self):
