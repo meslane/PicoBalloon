@@ -44,12 +44,12 @@ def main():
                     mode = "state_machine"
                     break
                 
-            if (time.time() - t_start) >= 10:
+            if (time.time() - t_start) >= 10: #nominally 10
                 mode = "state_machine"
                 break
 
     if mode == "reset_sleep":
-        time.sleep(10)
+        time.sleep(5) #nominally 10s
         machine.reset()
     elif mode == "telemetry":
         while True:

@@ -197,7 +197,7 @@ class Balloon:
         
         #set the system clock to 48 MHz to save power
         print("Setting system clock to 48 MHz")
-        machine.freq(48_000_000)
+        machine.freq(125_000_000) #nominally 48, CHANGE BACK
 
         #start GPS interrupt only after everything else succeeds
         self.gps_pps.irq(trigger=machine.Pin.IRQ_RISING, handler=self.pps_interrupt)
@@ -247,9 +247,10 @@ class Balloon:
         status['PPS'] = "PASS"
 
         start_pps = self.pps_count
-        time.sleep(1.1)
+        time.sleep(1.5)
         if self.pps_count == start_pps:
             status['PPS'] = "FAIL" # fail if PPS count does not increase after > 1s
+        print(start_pps, self.pps_count)
         
         # Test Altimeter
         try:
@@ -360,7 +361,7 @@ class Balloon:
         
         if self.state == "init":
             self.pps_count = 0
-            #self.watchdog = machine.WDT(timeout=2000) #2s watchdog expiration
+            self.watchdog = machine.WDT(timeout=8000) #8s watchdog expiration
             self.state = "wait_for_time"
 
         elif self.state == "wait_for_time":
@@ -487,7 +488,7 @@ class Balloon:
         if self.state != start_state:
             print("{} - {}".format(self.state, self.pps_count))
             
-        #self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
+        self.watchdog.feed() #pet watchdog to prevent resetting if loop is still active
         #time.sleep(10e-3) #sleep for 10ms at the end of each loop to save power
             
     def print_telemetry(self):
