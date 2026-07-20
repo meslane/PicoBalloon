@@ -192,23 +192,23 @@ Ballons in the W6NXP telemetry system have a three digit identifier ordered as s
 | --------- | ----------------- |
 | 0         | 0, 1, or Q        |
 | 1         | Digits 0 - 9 only |
-| 2         | Any letter A-Z + space |
+| 2         | Any letter A-Z |
 
 For example, I have chosen the identifier Q6N for ground testing of my balloon.
 
 This means that each telemetry identifier consumes 4 of the 6 usable callsign characters, since the first digit must be a space in order for character index 2 to legally be a letter. While this is wasteful, it provides good deconfliction with U4B style telemetry, as U4B style messages make use of every callsign character and therefore cannot adhere to this format.
 
-In total, there are 810 possible valid identifiers compared to the 600 possible channels per band in the U4B system.
+In total, there are 780 possible valid identifiers compared to the 600 possible channels per band in the U4B system.
 
 ### Telemetry encoding
 Of the remaining message content, we have:
 
-- 2x callsign letters (27x posible values each)
-- 2x grid square letters (17x possible values each)
+- 2x callsign letters (26x posible values each)
+- 2x grid square letters (18x possible values each)
 - 2x grid square numbers (10x possible values each)
 - 1x TX power level (19x possible values)
 
-Therefore, we can represent `27^2 * 17^2 * 10^2 * 19 = 400293900` possible permutations, or 28.6 effective bits per message. 
+Therefore, we can represent `26^2 * 18^2 * 10^2 * 19 = 416145600` possible permutations, or 28.6 effective bits per message.
 
 ### Balloon Telemetry
 
