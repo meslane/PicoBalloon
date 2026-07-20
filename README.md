@@ -190,7 +190,7 @@ Ballons in the W6NXP telemetry system have a three digit identifier ordered as s
 
 | Character | Valid Values      |
 | --------- | ----------------- |
-| 0         | 0, 1, or N        |
+| 0         | 0, 1, or Q        |
 | 1         | Digits 0 - 9 only |
 | 2         | Any letter A-Z + space |
 
@@ -230,7 +230,7 @@ The first and last transmission of a 10 minute cycle is a normal WSPR message co
 
 - Barometric pressure is telemetered in 2 mBar intervals from 0 - 1456 mBar.
 - GPS altitude is telemetered in 10 meter intervals with a range of 0 - 28890 meters.
-- Groundspeed in Knots is telemetered in 1 Knot intervals from 0 - 189 Knots.
+- Groundspeed in knots is telemetered in 1 knot intervals from 0 - 189 knots.
 
 #### Minute 6
 Telemetry for minute 6 is combined into a single 28 bit integer which is then packed into the WSPR format.
