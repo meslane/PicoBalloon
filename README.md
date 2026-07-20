@@ -1,10 +1,11 @@
 ```
-  ____  _           ____        _ _                    __     ______    _ 
- |  _ \(_) ___ ___ | __ )  __ _| | | ___   ___  _ __   \ \   / /___ \  / |
- | |_) | |/ __/ _ \|  _ \ / _` | | |/ _ \ / _ \| '_ \   \ \ / /  __) | | |
- |  __/| | (_| (_) | |_) | (_| | | | (_) | (_) | | | |   \ V /  / __/ _| |
- |_|   |_|\___\___/|____/ \__,_|_|_|\___/ \___/|_| |_|    \_/  |_____(_)_|
+    ____  _            ____        ____                     _    _____    _____
+   / __ \(_)________  / __ )____ _/ / /___  ____  ____     | |  / /__ \  |__  /
+  / /_/ / / ___/ __ \/ __  / __ `/ / / __ \/ __ \/ __ \    | | / /__/ /   /_ < 
+ / ____/ / /__/ /_/ / /_/ / /_/ / / / /_/ / /_/ / / / /    | |/ // __/_ ___/ / 
+/_/   /_/\___/\____/_____/\__,_/_/_/\____/\____/_/ /_/     |___//____(_)____/  
 ```
+<!-- Slant font from: https://patorjk.com/software/taag/#p=display&f=Slant&t=PicoBalloon+V2.3&x=none&v=4&h=4&w=80&we=false -->
 
 # Hardware Details
 
@@ -46,28 +47,28 @@ The reccomended procedure to calibrate the light sensors is to hold the board up
 
 The Si5351 is a CMOS clock generator that serves as the FM transmitter for the balloon's WSPR beacon. It must pass the ballon's selftest on startup in order to start the state machine.
 
-### PIN MAPPINGS
+### Pin Mappings
 
 | GPIO Pin | Si5351    |
 | -------- | --------  |
 | P21      | SDA       |
 | P22      | SCL       |
 
-### CALIBRATION
+### Calibration
 
 The 25 MHz crystal used is not particuarly accurate, and calibration with a frequency counter is needed to ensure that the output tone matches the programmed frequency.
 
 In the serial console, hit c + ENTER when prompted to enter calibration mode. This will play a constant tone at the frequency printed in console. Measure the frequency of this tone on a spectrum analyzer and set the `tx_correction` field in the config.json file to  `-1 * delta_f`, where `delta_f` is the measured offset between the specified frequency and the measured frequency
 
-### WARMUP
+### Warmup
 
 The Si5351 has ~10-20 Hz of measured drift across temperature from startup to steady state. It is reccomended to let the oscillator warm up for approximately 10 minutes to ensure transmission accuracy.
 
-## TESEO LIV3R GPS
+## Teseo LIV3R GPS
 
 The LIV3R is the ballon's GPS module which is used to get position and altitude fixes. It must pass the ballon's selftest on startup in order to start the state machine.
 
-### PIN MAPPINGS
+### Pin Mappings
 
 | GPIO Pin | LIV3R     |
 | -------- | --------  |
@@ -81,7 +82,7 @@ The LIV3R is the ballon's GPS module which is used to get position and altitude 
 
 The MS5607 is a barimetric pressure and temperature sensor. It is not required to function for the balloon to work in U4B telemetry mode, and the state machine will still proceed if it fails the built-in selftest.
 
-### PIN MAPPINGS
+### Pin Mappings
 
 | GPIO Pin | MS5607    |
 | -------- | --------  |
@@ -90,7 +91,7 @@ The MS5607 is a barimetric pressure and temperature sensor. It is not required t
 | P6       | MISO      |
 | P7       | CS        |
 
-### DATASHEET NOTES 
+### Datasheet Notes
 - D1 = pressure reading
 - D2 = temperature reading
 
@@ -142,12 +143,12 @@ WSPR TX frequencies are specified as an offset relative to a base frequency for 
 
 Ex, when `offsets = [40]` in config.json, the balloon wil transmit at 14.097.040 MHz (subject to thermal drift over temp).
 
-## Telemetry System
+## U4B Telemetry System
 This balloon supports the use of the U4B telemetry system: https://qrp-labs.com/flights/s4#protocol
 
 The U4B telem system further divides callsigns into a series of channels: https://traquito.github.io/channelmap/
 
-To avoid collisions, channels are divided by the minute (mod 10) when they transmit telemetry, the first two digits of the "telemetry callsign", and the frequency they transmit at.
+To avoid collisions, channels are divided by the minute (mod 10) when they transmit telemetry, the two digits of the "telemetry callsign", and the frequency they transmit at.
 
 It is reccomended to reserve a slot on the above site and update your config.json to the following:
 
@@ -175,6 +176,71 @@ Similarly, instead of encoding GPS validity with the GPS valid flag, we instead 
 ### Tracking
 If you have a reserved channel, you can then track your flight on this website: https://wsprtv.com/
 
+## W6NXP Telemetry System
+
+A downside of the traquito/U4B telem system is that it only supports up to 600 unique slots. It uses frequency duplexing, which means that a drifty TX frequency reference (as is common on lightweight balloons at high altitude) can cause slot violations. I had many issues with other user's balloon telemetry showing up in my queries when testing my balloons.
+
+Additionally, the U4B format only allows users to transmit one telemetry packet every 10 minutes (there are some extensions to this). So normally 4/5 slots are therefore wasted.
+
+I propose a new system that dedicates more bytes to user identification. While this is less information efficient **per-packet**, the elimination of time and frequency based channelization means that users can transmit telemetry at will without worrying about collisions.
+
+### Balloon Identification
+
+Ballons in the W6NXP telemetry system have a three digit identifier ordered as such:
+
+| Character | Valid Values      |
+| --------- | ----------------- |
+| 0         | 0, 1, or N        |
+| 1         | Digits 0 - 9 only |
+| 2         | Any letter A-Z + space |
+
+For example, I have chosen the identifier Q6N for ground testing of my balloon.
+
+This means that each telemetry identifier consumes 4 of the 6 usable callsign characters, since the first digit must be a space in order for character index 2 to legally be a letter. While this is wasteful, it provides good deconfliction with U4B style telemetry, as U4B style messages make use of every callsign character and therefore cannot adhere to this format.
+
+In total, there are 810 possible valid identifiers compared to the 600 possible channels per band in the U4B system.
+
+### Telemetry encoding
+Of the remaining message content, we have:
+
+- 2x callsign letters (27x posible values each)
+- 2x grid square letters (17x possible values each)
+- 2x grid square numbers (10x possible values each)
+- 1x TX power level (19x possible values)
+
+Therefore, we can represent `27^2 * 17^2 * 10^2 * 19 = 400293900` possible permutations, or 28.6 effective bits per message. 
+
+### Balloon Telemetry
+
+#### Minutes 0 and 8
+The first and last transmission of a 10 minute cycle is a normal WSPR message containing the user's normal callsign, grid, and power.
+
+#### Minute 2
+| Call \[5\]      | Call \[6\]      | Grid \[0\] | Grid \[1\] | Grid \[2\] | Grid \[3\] | Power        |
+| --------------- | --------------- | ---------- | ---------- | ---------- | ---------- | ------------ |
+| Subsquare \[1\] | Subsquare \[0\] | Grid \[0\] | Grid \[1\] | Grid \[2\] | Grid \[3\] | # Satellites |
+
+- The subsquare and grid square are redundantly encoded so that complete location information can be derived from this message if the normal WSPR message with its grid square is lost.
+- The number of satellites currently being recieved by the GPS module is telemetered in the power field.
+
+#### Minute 4
+| Call \[5\]      | Call \[6\]      | Grid \[0\]     | Grid \[1\]     | Grid \[2\]     | Grid \[3\]  | Power        |
+| --------------- | --------------- | ----------     | ----------     | ----------     | ----------  | ------------ |
+| Pressure \[1\]  | Pressure \[0\]  | Altitude \[2\] | Altitude \[1\] | Altitude \[0\] | Speed \[1\] | Speed \[0\]  |
+
+- Barometric pressure is telemetered in 2 mBar intervals from 0 - 1456 mBar.
+- GPS altitude is telemetered in 10 meter intervals with a range of 0 - 28890 meters.
+- Groundspeed in Knots is telemetered in 1 Knot intervals from 0 - 189 Knots.
+
+#### Minute 6
+Telemetry for minute 6 is combined into a single 28 bit integer which is then packed into the WSPR format.
+
+| Telemetry  | V-SOLAR     | V-IN        | L-FRONT     | L-BACK      | Temperature |
+| ---------  | ------      | ------      | ------      | ------      | ------      |
+| Bits       | 6           | 6           | 4           | 4           | 8           |
+| Resolution | 0.1 V       | 0.1 V       | 0.2 V       | 0.2 V       | 0.5 C       |
+| Range      | 3.0 - 9.3 V | 3.0 - 9.3 V | 0.0 - 3.0 V | 0.0 - 3.0 V | -64 - 63 C  |
+
 # Assembly Guide
 
 ## Through-Hole Capacitors
@@ -201,7 +267,7 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 - Switch to 5V -> 3.3V buck converter to enable use of higher voltage solar cells
 - Delete the 5V -> 2.5V LDO and power the converter directly off the +5V USB source instead
 - Delete the GPS LNA + filter and direct connect antenna to the RF_IN pin on the GPS module
-	- This is fine because there is little routing loss and therefore low NF degradation between the module and antenna
+	- This is fine because there is little routing loss and therefore low NF degradation between the module and antenna (future me: this is a false assertion in hindsight, fast acquisition requires gain before the module)
 	- Antenna will have the rolloff of a 1st order bandpass filter for out of band rejection
 - Add dedicated through hole pin for a wire antenna as a backup in case the inverted F antenna doesn't work
 - Add soldermask opening on inverted F to allow cutting + soldering GND
@@ -224,6 +290,9 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 
 - Add NJG1156PCD GPS FEM to signal chain to improve acquisition time
 
-# Bug List
+# Bug/Desired Feature List
 
+- Need some sort of temperature compensation on the clock synth. There is a noticable drift based on time of day and therefore likely temperaure.
+	- TODO: quantify tempco to come up with correction scheme
 - Messages pulled from the WSPR database sometimes have speed values that don't match what is reported on the balloon and the WSPR message reported in this case doesn't match what the balloon says it transmitted. Need to find out why.
+

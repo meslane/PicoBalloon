@@ -1,6 +1,8 @@
 import requests
 import json
 import pandas as pd
+import os
+
 from geopy import distance
 
 import utils
@@ -29,7 +31,16 @@ def query_standard_msg(call, d_start, d_end, band=14, num=10):
     r = requests.get(f"http://db1.wspr.live/?query={query}")
     
     return json.loads(r.text)
+    
+def query_wspr_dataframe(call, d_start, d_end, band=14, num=10):
+    wspr_df = pd.DataFrame()
+    wspr_data = query_standard_msg(call, d_start, d_end, band=band, num=num)['data']
 
+    for contact in wspr_data:
+        wspr_df = pd.concat([wspr_df, pd.DataFrame([contact])], ignore_index=True)
+        
+    return wspr_df
+    
 def GS2LL_tx(row):
     gs = str(row['grid'] + row['subsquare'])
     return utils.GS2LL(gs)
@@ -101,15 +112,30 @@ def filter_telem_outliers(telem_df, max_distance=4e3):
     return telem_df
     
 def print_telem(telem_df):
-    print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "rx_dist", "call"]))
+    print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "call"]))
 
-#Note that the last day specified in your query should be one day AFTER the last day you're trying to query
+def main():
+    '''
+    telem_database = "telem.csv"
+    
+    # Checks specifically for a file
+    if os.path.isfile(telem_database):
+        print("The file exists.")
+    else:
+        print("The file does not exist")
+        
+    '''
+    
+    #Note that the last day specified in your query should be one day AFTER the last day you're trying to query
 
-#print(query_standard_msg("W6NXP", "2026-06-18", "2026-06-22")['data'])
+    #print(query_standard_msg("W6NXP", "2026-06-18", "2026-06-22")['data'])
 
-raw_df = get_full_telem("W6NXP", "Q2", 8, 14097170, "2026-06-21", "2026-06-30", num=50, freq_tolerance=50)
-filtered_df = filter_telem_outliers(raw_df)
+    raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-07-18", "2026-07-21", num=1000, freq_tolerance=30)
+    filtered_df = filter_telem_outliers(raw_df, max_distance=3.0e3)
 
-#print_telem(raw_df)
-print_telem(filtered_df)
-
+    #print_telem(raw_df)
+    print_telem(filtered_df)
+    #print(filtered_df)
+        
+if __name__ == "__main__":
+    main()
