@@ -228,8 +228,8 @@ The first and last transmission of a 10 minute cycle is a normal WSPR message co
 | --------------- | --------------- | ----------     | ----------     | ----------     | ----------  | ------------ |
 | Pressure \[1\]  | Pressure \[0\]  | Altitude \[2\] | Altitude \[1\] | Altitude \[0\] | Speed \[1\] | Speed \[0\]  |
 
-- Barometric pressure is telemetered in 2 mBar intervals from 0 - 1456 mBar.
-- GPS altitude is telemetered in 10 meter intervals with a range of 0 - 28890 meters.
+- Barometric pressure is telemetered in 2 mBar intervals from 0 - 1350 mBar.
+- GPS altitude is telemetered in 10 meter intervals with a range of 0 - 32390 meters.
 - Groundspeed in knots is telemetered in 1 knot intervals from 0 - 189 knots.
 
 #### Minute 6
