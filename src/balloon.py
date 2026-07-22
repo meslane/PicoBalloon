@@ -33,6 +33,7 @@ class Balloon:
             self.telemetry_call = config['telemetry_call']
             self.telem_alt_as_pwr = config['telemeter_altitude_as_power']
             self.log_to_file = config['log_to_file']
+            self.w6nxp_telem_prefix = config['w6nxp_telem_prefix']
             
             # mod 10 of the time in minutes, determines when telemetry is sent in accordance with https://traquito.github.io/channelmap/
             if config['telemetry_minute'] > 0:
@@ -384,10 +385,15 @@ class Balloon:
             t_now = gprmc_dict['t_utc']
             wspr_text = ""
             
-            # Check for both the exact telem minute and 1 minute before in the nominal case
+            # For U4B telem: check for both the exact telem minute and 1 minute before in the nominal case
             min_now = int((int(t_now) // 100) % 10)
             is_telem_minute = (min_now == self.telemetry_minute) or (min_now == self.telemetry_minute - 1)
             
+            # Grab telem if at beginning so we know we have good data
+            if self.telemetry['v_solar'] == 0 and self.telemetry['v_in'] == 0:
+                self.update_telemetry()
+                print(self.telemetry)
+
             # Do normal WSPR message
             if (self.telemetry_mode == "WSPR") or (self.telemetry_mode == "U4B" and is_telem_minute == False):
                 # Update telemetry only once every 4 minutes to avoid tears in location
@@ -415,11 +421,6 @@ class Balloon:
 
             # Transmit U4B telemetry when it is our minute
             elif self.telemetry_mode == "U4B" and is_telem_minute == True:
-                # Grab telem if at beginning so we know we have good data
-                if self.telemetry['v_solar'] == 0 and self.telemetry['v_in'] == 0:
-                    self.update_telemetry()
-                    print(self.telemetry)
-
                 subsquare = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[-2:]
 
                 # Gefine GPS = healthy if it sees at least 8 satellites
@@ -451,6 +452,43 @@ class Balloon:
                 wspr_text = "{} {} {}".format(callsign, gs_and_power[0], gs_and_power[1])
                 print(wspr_text)
             
+            # Custom W6NXP Telemetry Scheme
+            elif self.telemetry_mode == "W6NXP":
+                # Transmit subsquare and number of satellites
+                if min_now in [2,3]:
+                    wspr_pwr = wspr.encode_w6nxp_sat_count(self.telemetry['satellites'])
+                    full_grid = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])
+                    grid_square = full_grid[:4]
+                    telem_call = full_grid[-2:]
+                    callsign = self.w6nxp_telem_prefix + telem_call
+                # Transmit barometric pressure, altitude, and speed
+                elif min_now in [4,5]:
+                    telem_call, grid_square, wspr_pwr = wspr.encode_w6nxp_alt_telem(self.telemetry['p_mbar'],
+                                                                                    self.telemetry['alt_m'],
+                                                                                    self.telemetry['groundspeed_kn'])
+                    callsign = self.w6nxp_telem_prefix + telem_call
+                # Transmit ADC telemetry + temperature
+                elif min_now in [6,7]:
+                    telem_call, grid_square, wspr_pwr = wspr.encode_w6nxp_adc_telem(self.telemetry['v_solar'],
+                                                                                    self.telemetry['v_in'],
+                                                                                    self.telemetry['l_front'],
+                                                                                    self.telemetry['l_back'],
+                                                                                    self.telemetry['temp_c'])
+                    callsign = self.w6nxp_telem_prefix + telem_call
+                # Normal WSPR for the first and last minute of a 10 minute period
+                else:
+                    # Grab new telemetry for the next cycle
+                    self.update_telemetry()
+                    print(self.telemetry)
+
+                    callsign = self.callsign
+                    grid_square = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])[:4]
+                    wspr_pwr = 10 # 10 dBm TX power out of clkgen
+
+                self.message = wspr.generate_wspr_message(callsign, grid_square, wspr_pwr)
+                wspr_text = "{} {} {}".format(callsign, grid_square, wspr_pwr)
+                print(wspr_text)
+
             if self.log_to_file == True:
                 with open("log.csv", "a") as f:
                     f.write("{},{},{}\n".format(d_now, t_now, wspr_text))

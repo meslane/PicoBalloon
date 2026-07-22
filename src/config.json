@@ -7,10 +7,11 @@
 	"telemeter_lsense": false,
 	"lsense_top_correction": 1,
 	"lsense_bot_correction": 1,
-	"telemetry_mode": "U4B",
+	"telemetry_mode": "W6NXP",
+	"w6nxp_telem_prefix": "Q6N",
 	"telemetry_call": "Q2",
 	"telemetry_minute": 8,
 	"telemetry_channel": 450,
-	"telemeter_altitude_as_power": true,
-	"log_to_file": true
+	"telemeter_altitude_as_power": false,
+	"log_to_file": true,
 }
