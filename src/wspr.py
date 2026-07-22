@@ -282,9 +282,9 @@ def encode_w6nxp_alt_telem(pressure, altitude, speed):
     '''
     Encode pressure, altitude, and spped telem into the W6NXP format and return the message
     '''
-    pressure = min(max(0, pressure), 1350)
-    altitude = min(max(0, altitude), 32399)
-    speed = min(max(0, speed), 189)
+    pressure = round(min(max(0, pressure), 1350))
+    altitude = round(min(max(0, altitude), 32399))
+    speed = round(min(max(0, speed), 189))
 
     power_lut = [0,3,7,10,13,17,
                  20,23,27,30,33,37,
@@ -307,7 +307,7 @@ def encode_w6nxp_alt_telem(pressure, altitude, speed):
 
     return (''.join(callsign), ''.join(grid_square), power)
 
-def encode_w6nxp_sat_count(grid, subsquare, satellites):
+def encode_w6nxp_sat_count(satellites):
     '''
     Encode satellite count into the W6NXP format
 

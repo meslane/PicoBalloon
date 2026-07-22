@@ -454,21 +454,25 @@ class Balloon:
             
             # Custom W6NXP Telemetry Scheme
             elif self.telemetry_mode == "W6NXP":
+                print(min_now)
                 # Transmit subsquare and number of satellites
-                if min_now in [2,3]:
+                if min_now in [1,2]:
+                    print("Telemetering subsquare + sat count")
                     wspr_pwr = wspr.encode_w6nxp_sat_count(self.telemetry['satellites'])
                     full_grid = wspr.LL2GS(self.telemetry['lat_deg'], self.telemetry['lon_deg'])
                     grid_square = full_grid[:4]
-                    telem_call = full_grid[-2:]
+                    telem_call = str(full_grid[-2:]).upper()
                     callsign = self.w6nxp_telem_prefix + telem_call
                 # Transmit barometric pressure, altitude, and speed
-                elif min_now in [4,5]:
+                elif min_now in [3,4]:
+                    print("Telemetering speed + altitude")
                     telem_call, grid_square, wspr_pwr = wspr.encode_w6nxp_alt_telem(self.telemetry['p_mbar'],
                                                                                     self.telemetry['alt_m'],
                                                                                     self.telemetry['groundspeed_kn'])
                     callsign = self.w6nxp_telem_prefix + telem_call
                 # Transmit ADC telemetry + temperature
-                elif min_now in [6,7]:
+                elif min_now in [5,6]:
+                    print("Telemetering ADCs + temperature")
                     telem_call, grid_square, wspr_pwr = wspr.encode_w6nxp_adc_telem(self.telemetry['v_solar'],
                                                                                     self.telemetry['v_in'],
                                                                                     self.telemetry['l_front'],
