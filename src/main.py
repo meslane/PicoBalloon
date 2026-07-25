@@ -3,6 +3,7 @@ import time
 import machine
 import sys
 import select
+import wspr
 
 def main():
     b = balloon.Balloon("config.json", "geofence.json")
@@ -54,6 +55,33 @@ def main():
     elif mode == "telemetry":
         while True:
             b.print_telemetry()
+            
+            # Print expected W6NXP telem if using this mode
+            if b.telemetry_mode == "W6NXP":
+                # Subsquate / number of sats
+                wspr_pwr = wspr.encode_w6nxp_sat_count(b.telemetry['satellites'])
+                full_grid = wspr.LL2GS(b.telemetry['lat_deg'], b.telemetry['lon_deg'])
+                grid_square = full_grid[:4]
+                telem_call = full_grid[-2:]
+                callsign = b.w6nxp_telem_prefix + telem_call
+                print(f"Position + sat count telemetry: {callsign} {grid_square} {wspr_pwr}")
+                
+                # Altitude telem
+                telem_call, grid_square, wspr_pwr = wspr.encode_w6nxp_alt_telem(b.telemetry['p_mbar'],
+                                                                                b.telemetry['alt_m'],
+                                                                                b.telemetry['groundspeed_kn'])
+                callsign = b.w6nxp_telem_prefix + telem_call
+                print(f"Altitude telemetry: {callsign} {grid_square} {wspr_pwr}")
+                
+                # ADC + Temp telem
+                telem_call, grid_square, wspr_pwr = wspr.encode_w6nxp_adc_telem(b.telemetry['v_solar'],
+                                                                                b.telemetry['v_in'],
+                                                                                b.telemetry['l_front'],
+                                                                                b.telemetry['l_back'],
+                                                                                b.telemetry['temp_c'])
+                callsign = b.w6nxp_telem_prefix + telem_call
+                print(f"ADC + temp telemetry: {callsign} {grid_square} {wspr_pwr}\n")
+            
             time.sleep(0.01)
     elif mode == "calibration":
         print("Transmitting tone, calibrate to 14.097.100 MHz")

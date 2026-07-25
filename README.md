@@ -295,4 +295,5 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 - Need some sort of temperature compensation on the clock synth. There is a noticable drift based on time of day and therefore likely temperaure.
 	- TODO: quantify tempco to come up with correction scheme
 - Messages pulled from the WSPR database sometimes have speed values that don't match what is reported on the balloon and the WSPR message reported in this case doesn't match what the balloon says it transmitted. Need to find out why.
+- ADC telem encoding and/or decoding is currently not working properly
 

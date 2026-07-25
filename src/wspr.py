@@ -272,7 +272,7 @@ def encode_w6nxp_adc_telem(v_solar, v_in, l_front, l_back, temp):
     l_back  = min(max(0, l_back), 3.0)
     l_front = min(max(0, l_front), 3.0)
     v_in    = min(max(3.0, v_in), 9.3)
-    v_in    = min(max(3.0, v_solar), 9.3)
+    v_solar = min(max(3.0, v_solar), 9.3)
 
     telem_int = (round((v_solar - 3) * 10) << 22) | (round((v_in - 3) * 10) << 16) | (round(l_front * 5) << 12) | (round(l_back * 5) << 8) | round((temp + 64) * 2)
 
