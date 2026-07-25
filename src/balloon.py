@@ -67,7 +67,7 @@ class Balloon:
             
             V_IN_ADC_IN = 26
             V_SOLAR_ADC_IN = 27
-        elif self.version in ["1.1", "2.1", "2.2"]:
+        elif self.version in ["1.1", "2.1", "2.2", "2.3"]:
             CLKGEN_SDA = 20
             CLKGEN_SCL = 21
             CLKGEN_CHANNEL = 0
@@ -114,7 +114,7 @@ class Balloon:
                 sck=machine.Pin(ALTIMETER_SCK),
                 mosi=machine.Pin(ALTIMETER_MOSI),
                 miso=machine.Pin(ALTIMETER_MISO)) 
-        elif self.version in ["1.1", "2.1", "2.2"]:
+        elif self.version in ["1.1", "2.1", "2.2", "2.3"]:
             altimeter_spi = machine.SPI(baudrate=100000,
                 polarity=0,
                 phase=0,
@@ -134,7 +134,7 @@ class Balloon:
             clockgen_i2c = machine.SoftI2C(scl=machine.Pin(CLKGEN_SCL),
                                            sda=machine.Pin(CLKGEN_SDA),
                                            freq=100000, timeout=10000)
-        elif self.version in ["1.1", "2.1", "2.2"]:
+        elif self.version in ["1.1", "2.1", "2.2", "2.3"]:
             clockgen_i2c = machine.I2C(id=CLKGEN_CHANNEL,
                                        scl=machine.Pin(CLKGEN_SCL),
                                        sda=machine.Pin(CLKGEN_SDA),
@@ -321,7 +321,7 @@ class Balloon:
         elif self.version == "2.1":
             # v2.1 uses x2 factor for voltage rails to account for voltage divider
             adc_scale = 2.0
-        elif self.version == "2.2":
+        elif self.version in ["2.2", "2.3"]:
             # v2.2 uses 10k and 47k voltage divider (1.0/0.175438596 = 5.7)
             adc_scale = 5.7
 

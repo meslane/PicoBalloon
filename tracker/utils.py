@@ -224,8 +224,8 @@ def main():
     print(decode_w6nxp_subsquare_telem(sub_call, sub_grid, sub_power))
     '''
     print(decode_w6nxp_subsquare_telem("Q6NAA", "JJ00", 0))
-    print(decode_w6nxp_alt_telem("Q6NTJ", "AB00", 0))
-    print(decode_w6nxp_adc_telem("Q6NAC", "BD06", 47))
+    print(decode_w6nxp_alt_telem("Q6NTK", "AB00", 0))
+    print(decode_w6nxp_adc_telem("Q6NAC", "BD06", 50))
 
 if __name__ == "__main__":
     main()

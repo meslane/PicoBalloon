@@ -274,7 +274,8 @@ def encode_w6nxp_adc_telem(v_solar, v_in, l_front, l_back, temp):
     v_in    = min(max(3.0, v_in), 9.3)
     v_solar = min(max(3.0, v_solar), 9.3)
 
-    telem_int = (round((v_solar - 3) * 10) << 22) | (round((v_in - 3) * 10) << 16) | (round(l_front * 5) << 12) | (round(l_back * 5) << 8) | round((temp + 64) * 2)
+    telem_int = (int(round((v_solar - 3) * 10)) << 22) | (int(round((v_in - 3) * 10)) << 16) |\
+                (int(round(l_front * 5)) << 12) | (int(round(l_back * 5)) << 8) | int(round((temp + 64) * 2))
 
     return int_to_wspr(telem_int)
 
@@ -282,9 +283,9 @@ def encode_w6nxp_alt_telem(pressure, altitude, speed):
     '''
     Encode pressure, altitude, and spped telem into the W6NXP format and return the message
     '''
-    pressure = round(min(max(0, pressure), 1350))
-    altitude = round(min(max(0, altitude), 32399))
-    speed = round(min(max(0, speed), 189))
+    pressure = int(round(min(max(0, pressure), 1350)))
+    altitude = int(round(min(max(0, altitude), 32399)))
+    speed = int(round(min(max(0, speed), 189)))
 
     power_lut = [0,3,7,10,13,17,
                  20,23,27,30,33,37,
