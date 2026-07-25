@@ -62,7 +62,7 @@ def main():
                 wspr_pwr = wspr.encode_w6nxp_sat_count(b.telemetry['satellites'])
                 full_grid = wspr.LL2GS(b.telemetry['lat_deg'], b.telemetry['lon_deg'])
                 grid_square = full_grid[:4]
-                telem_call = full_grid[-2:]
+                telem_call = full_grid[-2:].upper()
                 callsign = b.w6nxp_telem_prefix + telem_call
                 print(f"Position + sat count telemetry: {callsign} {grid_square} {wspr_pwr}")
                 

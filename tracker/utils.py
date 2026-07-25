@@ -187,7 +187,7 @@ def encode_w6nxp_subsquare_telem(grid, subsquare, satellites):
     return (subsquare[0:2].upper(), grid, power)
 
 def decode_w6nxp_subsquare_telem(callsign, grid_square, power):
-    full_grid = grid_square + callsign.lower()
+    full_grid = grid_square + callsign[-2:].lower()
 
     power_lut = [0,3,7,10,13,17,
                  20,23,27,30,33,37,
@@ -195,7 +195,13 @@ def decode_w6nxp_subsquare_telem(callsign, grid_square, power):
 
     satellites = power_lut.index(power)
 
-    return (full_grid, satellites)
+    sub_dict = {
+        "full_grid": full_grid,
+        "lat_lon": GS2LL(full_grid),
+        "satellites": satellites
+    }
+
+    return (sub_dict)
 
 def main():
     '''
@@ -217,9 +223,9 @@ def main():
     print(sub_call, sub_grid, sub_power)
     print(decode_w6nxp_subsquare_telem(sub_call, sub_grid, sub_power))
     '''
-    print(decode_w6nxp_adc_telem("Q6NAC", "BD06", 47))
+    print(decode_w6nxp_subsquare_telem("Q6NAA", "JJ00", 0))
     print(decode_w6nxp_alt_telem("Q6NTJ", "AB00", 0))
-    #print(int_to_wspr(encode_w6nxp_adc_telem(0.6057223, 4.8933096, 1.133096, 0.99527704, 29.803492)))
+    print(decode_w6nxp_adc_telem("Q6NAC", "BD06", 47))
 
 if __name__ == "__main__":
     main()
