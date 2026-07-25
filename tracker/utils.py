@@ -94,13 +94,14 @@ def wspr_to_int(callsign, grid_square, power):
     return telem_int
 
 def encode_w6nxp_adc_telem(v_solar, v_in, l_front, l_back, temp):
-    assert -64 <= temp <= 63
-    assert 0 <= l_back <= 3.0
-    assert 0 <= l_front <= 3.0
-    assert 3.0 <= v_in <= 9.3
-    assert 3.0 <= v_solar <= 9.3
+    temp    = min(max(-64, temp), 63)
+    l_back  = min(max(0, l_back), 3.0)
+    l_front = min(max(0, l_front), 3.0)
+    v_in    = min(max(3.0, v_in), 9.3)
+    v_solar = min(max(3.0, v_solar), 9.3)
 
-    telem_int = (round((v_solar - 3) * 10) << 22) | (round((v_in - 3) * 10) << 16) | (round(l_front * 5) << 12) | (round(l_back * 5) << 8) | round((temp + 64) * 2)
+    telem_int = (int(round((v_solar - 3) * 10)) << 22) | (int(round((v_in - 3) * 10)) << 16) | \
+                (int(round(l_front * 5)) << 12) | (int(round(l_back * 5)) << 8) | int(round((temp + 64)) * 2)
 
     return telem_int
 
@@ -197,6 +198,7 @@ def decode_w6nxp_subsquare_telem(callsign, grid_square, power):
     return (full_grid, satellites)
 
 def main():
+    '''
     test_int = encode_w6nxp_adc_telem(4.1, 9.1, 2.6, 2.4, -10.5)
 
     print(test_int)
@@ -214,6 +216,10 @@ def main():
     sub_call, sub_grid, sub_power = encode_w6nxp_subsquare_telem("DM03", "tu", 5)
     print(sub_call, sub_grid, sub_power)
     print(decode_w6nxp_subsquare_telem(sub_call, sub_grid, sub_power))
+    '''
+    print(decode_w6nxp_adc_telem("Q6NAC", "BD06", 47))
+    print(decode_w6nxp_alt_telem("Q6NTJ", "AB00", 0))
+    #print(int_to_wspr(encode_w6nxp_adc_telem(0.6057223, 4.8933096, 1.133096, 0.99527704, 29.803492)))
 
 if __name__ == "__main__":
     main()
