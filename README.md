@@ -124,12 +124,12 @@ Test run at 5.2 V / 30C with 1k LED current limiting resistors. Set system clock
 
 ### Solar Panels
 
-For V2.1, I use these flexible solar panels from powerfilm: https://www.mouser.com/ProductDetail/730-MPT4.8-75
+For V2.1 and beyond, I use these flexible solar panels from powerfilm: https://www.mouser.com/ProductDetail/730-MPT4.8-75
 
 Note that their open circuit voltage of 7.4V is higher than the rated max input voltage of the BC on V2.0 and V2.1. On V2.2 this will be fixed by switching to a converter with a higher input voltage rating.
 
 ### Power Sequencing
-Testing on V2.1 revealed that the RP2040 will get stuck in a latched state if it is powered off of solar arrays without tying the RUN pin to GND until the 3.3V rail is at full scale. On V2.2 this is fixed by directly connecting the RUN pin to the open drain PGOOD signal of the buck converter. This will automatically reset the RP2040 if the output power rail droops too low. 
+Testing on V2.1 revealed that the RP2040 will get stuck in a latched state if it is powered off of solar arrays without tying the RUN pin to GND until the 3.3V rail is at full scale. On V2.2 and beyond this is fixed by directly connecting the RUN pin to the open drain PGOOD signal of the buck converter. This will automatically reset the RP2040 if the output power rail droops too low. 
 
 # Tracking
 
@@ -246,11 +246,35 @@ Telemetry for minute 6 is combined into a single 28 bit integer which is then pa
 ## Through-Hole Capacitors
 C24 and C21 on V2.0 and beyond should be populated with supercapcitors to hold charge from the solar panels (in lieu of a battery).
 
-C24 and C21 are wired in series and are connected to the solar cell input through a protection diode. Ensure that the caps you use are rated for > 3.0 V DC bias.
+C24 and C21 are wired in series and are connected to the solar cell input through a protection diode. Ensure that the caps you use are rated for > 5.0 V DC bias.
 
-Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the board over USB on the ground. USB power is often very poorly filtered and the board's power rail may be too noisy to properly power the RP2040 when bulk caps are not present. On V2.2 and beyond this is fixed by adding an additional surface mount 22 uF cap to the input rail.
+On V2.1, Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the board over USB on the ground. USB power is often very poorly filtered and the board's power rail may be too noisy to properly power the RP2040 when bulk caps are not present. On V2.2 and beyond this is fixed by adding an additional surface mount 22 uF cap to the input rail.
+
+## Solar Panels
+To attatch the solar panels to the PCB, 3D-print the STL file in the zipped project file for the solar support: `hardware\Mechanical\Balloon_Solar_Support_v1.0.zip`
+
+The powerfilm solar panels should be soldered in parallel. Use a pick or small knife to peel back the film covering the bus bars, and solder the two GND and +V bars together, with an additional set of wire leads to solder to the balloon PCB. It is reccomended to solder the panels together before epoxying them to the solar supports, in order to avoid melting the plastic.
+
+Panels should be secured to the supports with a 2-part epoxy. I used Gorilla Glue, but JB Weld or any other similar brand should work.
+
+Ground testing has shown PLA filament to be subject to warping after a couple weeks in direct sunlight. It is reccomended to print the solar support with a light colored PETG filament to minimize materal degradation over time when in flight.
+
+Attatch the solar panels to the balloon using M2.5 nylon screws + nuts to secure the bottom two mounting holes (closest to the buck converter/through hole caps) to the 3D-printed solar supports.
+
+After the panels are attatched to the PCB, solder the remaining wire leads to the + and - solar terminals on the PCB.
+
+## HF Antenna
+Cut two lengths of thin enamel magnet wire to the following dimensions, based on the intended band of operation:
+
+| Band | Wire Length (m) | Total Dipole Length (m) |
+| ---  | --------------  | ----------------------- |
+| 20m  | 5.32            | 10.64                   |
+| 40m  | 10.65           | 21.30                   |
+
+Loop each wire through the strain relief hole on the pcb before soldering it into the through-hole on the opposite side of the board. After soldering, it is reccomended to fill the strain relief holes with epoxy or hot glue for additional support in flight.
 
 # Change Logs
+
 ## v1.0 -> v1.1 Hardware Changelog
 
 - Change header for SWD to 2.54mm pin header from test points
@@ -295,4 +319,3 @@ Populating C24 and C21 with cap values > 2.2 uF is reccomended when powering the
 - Need some sort of temperature compensation on the clock synth. There is a noticable drift based on time of day and therefore likely temperaure.
 	- TODO: quantify tempco to come up with correction scheme
 - U4B messages pulled from the WSPR database sometimes have speed values that don't match what is reported on the balloon and the WSPR message reported in this case doesn't match what the balloon says it transmitted. Need to find out why.
-
