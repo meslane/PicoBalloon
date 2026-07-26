@@ -21,6 +21,30 @@ def query_telem(call, minute, tx_freq, d_start, d_end, freq_tolerance=20, band=1
     
     return json.loads(r.text)
     
+def query_w6nxp_telem(call, d_start, d_end, band=14, num=10):
+    '''
+    Query messages matching the W6NXP telemetry style
+    '''
+    call_regex = f"'^{call}.*'"
+
+    query = f"SELECT * FROM wspr.rx WHERE time > '{d_start}' AND time <= '{d_end}' AND band == {band} AND match(tx_sign, {call_regex}) == 1 ORDER BY id DESC LIMIT {num} FORMAT JSON;"
+
+    r = requests.get(f"http://db1.wspr.live/?query={query}")
+    
+    return json.loads(r.text)
+    
+def query_w6nxp_telem_dataframe(call, d_start, d_end, band=14, num=10):
+    '''
+    Query a dataframe containing all queried W6NXP style packets
+    '''
+    telem_df = pd.DataFrame()
+    telem_data = query_w6nxp_telem(call, d_start, d_end, band=band, num=num)['data']
+
+    for contact in telem_data:
+        telem_df = pd.concat([telem_df, pd.DataFrame([contact])], ignore_index=True)
+
+    return telem_df
+    
 def query_standard_msg(call, d_start, d_end, band=14, num=10):
     '''
     Query standard WSPR callsigns matching the specified pattern
@@ -115,27 +139,7 @@ def print_telem(telem_df):
     print(telem_df.drop(columns=["channel", "id", "rx_loc", "rx_coords", "call"]))
 
 def main():
-    '''
-    telem_database = "telem.csv"
-    
-    # Checks specifically for a file
-    if os.path.isfile(telem_database):
-        print("The file exists.")
-    else:
-        print("The file does not exist")
-        
-    '''
-    
-    #Note that the last day specified in your query should be one day AFTER the last day you're trying to query
+    print(query_w6nxp_telem_dataframe("Q6N", "2026-07-25", "2026-07-27", num=50))
 
-    #print(query_standard_msg("W6NXP", "2026-06-18", "2026-06-22")['data'])
-
-    raw_df = get_full_telem("W6NXP", "Q2", 8, 14097140, "2026-07-18", "2026-07-21", num=1000, freq_tolerance=30)
-    filtered_df = filter_telem_outliers(raw_df, max_distance=3.0e3)
-
-    #print_telem(raw_df)
-    print_telem(filtered_df)
-    #print(filtered_df)
-        
 if __name__ == "__main__":
     main()

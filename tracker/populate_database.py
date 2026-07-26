@@ -25,7 +25,7 @@ def main():
     if os.path.isfile(telem_filename):
         telem_df = pd.read_csv(telem_filename)
     else:
-        print("Could not locate U4B telemetry database file, creating empty dataframe")
+        print("Could not locate W6NXP telemetry database file, creating empty dataframe")
         telem_df = pd.DataFrame()
         
     latest_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -50,12 +50,33 @@ def main():
     
     if write_wspr.lower() == 'y':
         wspr_df = pd.concat([wspr_df, wspr_query_df], ignore_index=True).drop_duplicates()
+        wspr_df.sort_values(by='id', inplace=True)
         wspr_df.to_csv(wspr_filename, index=False)
         print("Wrote WSPR database")
         
-    # Get latest U4B style telemetry
+    # Get latest W6NXP style telemetry
+    print("\nQuerying telemetry")
     if telem_df.empty:
         print("Cannot get latest date from an empty telemetry dataframe!")
+        print("Please enter the earliest UTC date you'd like to search in YYYY-MM-DD format")
+        telem_start_date = input('>')
+    else:
+        telem_start_date = telem_df.loc[telem_df['id'].idxmax()]['time']
+        print(f"Last spot date in telemetry dateframe was {telem_start_date}")
+        
+    print(f"Querying for spots from {telem_start_date} to {latest_date}")
+    telem_query_df = tracker.query_w6nxp_telem_dataframe(config['telem_prefix'], 
+                                                        telem_start_date, latest_date, num=1000)
+
+    print(telem_query_df)
+    print("\nWrite new telemetry data to database? (Y/N)")
+    write_telem = input('>')
+    
+    if write_telem.lower() == 'y':
+        telem_df = pd.concat([telem_df, telem_query_df], ignore_index=True).drop_duplicates()
+        telem_df.sort_values(by='id', inplace=True)
+        telem_df.to_csv(telem_filename, index=False)
+        print("Wrote telemetry database")
     
 if __name__ == "__main__":
     main()

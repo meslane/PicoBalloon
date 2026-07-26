@@ -195,9 +195,12 @@ def decode_w6nxp_subsquare_telem(callsign, grid_square, power):
 
     satellites = power_lut.index(power)
 
+    lat, lon = GS2LL(full_grid)
+
     sub_dict = {
         "full_grid": full_grid,
-        "lat_lon": GS2LL(full_grid),
+        "lat": lat,
+        "long": lon,
         "satellites": satellites
     }
 
@@ -225,7 +228,7 @@ def main():
     '''
     print(decode_w6nxp_subsquare_telem("Q6NAA", "JJ00", 0))
     print(decode_w6nxp_alt_telem("Q6NTK", "AB00", 0))
-    print(decode_w6nxp_adc_telem("Q6NAC", "BD06", 50))
+    print(decode_w6nxp_adc_telem("Q6NGX", "RE25", 17))
 
 if __name__ == "__main__":
     main()
