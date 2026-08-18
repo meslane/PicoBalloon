@@ -266,12 +266,31 @@ After the panels are attatched to the PCB, solder the remaining wire leads to th
 ## HF Antenna
 Cut two lengths of thin enamel magnet wire to the following dimensions, based on the intended band of operation:
 
-| Band | Wire Length (m) | Total Dipole Length (m) |
-| ---  | --------------  | ----------------------- |
-| 20m  | 5.32            | 10.64                   |
-| 40m  | 10.65           | 21.30                   |
+| Band | Wire Length (m) | Wire Length (ft) | Total Dipole Length (m) |
+| ---  | --------------  | ---------------- | ----------------------- |
+| 20m  | 5.32            | 17'6"            | 10.64                   |
+| 40m  | 10.65           | 34'12"           | 21.30                   |
 
 Loop each wire through the strain relief hole on the pcb before soldering it into the through-hole on the opposite side of the board. After soldering, it is reccomended to fill the strain relief holes with epoxy or hot glue for additional support in flight.
+
+# Bringup Tips
+After SMT assembling a board for the first time, the following procedure is reccomended to avoid large scale hardware damage in the event of open or short solder connections in the wrong place.
+
+1. Apply +3.7V to the solar input pins
+2. Measure the voltage of the +3.3V rail anywhere on the board
+	1. If you measure > 3.3V, the switching regulator is likely non-functional, and you would damage the hardware on the board if powered over USB.
+	2. Rework the switching regulator and repeat this process until you measure +3.3V as expected
+3. Once you confirm the reguator is working as expected, plug the board in with the BOOT pin shorted
+	1. If you do not see a removable storage device show up in Windows, check the RP2040's clock with an oscilloscope and verify that you see a 12 MHz sine wave
+		1. If you do not see a sine wave, rework the clock circuit
+	2. If you do see a sine wave, check that neither USB pin is shorted. It is possible to short one end of the diff pair to +3V3, which will kill the RP2040's USB port permanently.
+		1. If USB is shorted to +3V3, replace the RP2040 chip
+4. Once the micropython bootloader is flashed and the balloon software is uploaded, run main.py and check to see that all peripheral selftests passed.
+	1. If any selftests failed, rework those components
+5. After the device boots and all selftests pass, perform a GPS livesky test and confirm that you are able to see satellites and get a GPS fix.
+	1. If you cannot get a GPS fix, you likely need to rework the GPS FEM IC or double check your connection to the antenna.
+6. Finally, after all hardware is confirmed to be functional, run calibration of the TX output tone and light sensor levels.
+7. You should now be ready to fly. It is reccomended to get at least one over-the-air WSPR spot before launch as a final end-to-end test.
 
 # Change Logs
 
